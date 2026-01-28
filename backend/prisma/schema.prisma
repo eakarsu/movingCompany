@@ -1,0 +1,876 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User and Authentication
+model User {
+  id            String   @id @default(uuid())
+  email         String   @unique
+  password      String
+  firstName     String
+  lastName      String
+  phone         String?
+  role          UserRole @default(STAFF)
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  leads         Lead[]
+  jobs          Job[]        @relation("AssignedJobs")
+  createdJobs   Job[]        @relation("CreatedJobs")
+  crewAssignments CrewAssignment[]
+  communications Communication[]
+  createdQuotes Quote[]
+}
+
+enum UserRole {
+  ADMIN
+  MANAGER
+  STAFF
+  DRIVER
+  CREW_LEAD
+}
+
+// Lead Management
+model Lead {
+  id              String      @id @default(uuid())
+  firstName       String
+  lastName        String
+  email           String
+  phone           String
+  source          LeadSource
+  status          LeadStatus  @default(NEW)
+
+  // Move details
+  moveDate        DateTime?
+  moveType        MoveType?
+  originAddress   String?
+  originCity      String?
+  originState     String?
+  originZip       String?
+  destAddress     String?
+  destCity        String?
+  destState       String?
+  destZip         String?
+
+  // Property details
+  originPropertyType    PropertyType?
+  originBedrooms        Int?
+  originFloors          Int?
+  originElevator        Boolean?
+  originParkingDistance Int?
+  destPropertyType      PropertyType?
+  destBedrooms          Int?
+  destFloors            Int?
+  destElevator          Boolean?
+  destParkingDistance   Int?
+
+  // Additional info
+  estimatedVolume Float?
+  specialItems    String?
+  notes           String?
+
+  // Qualification
+  qualificationScore Int?
+  qualifiedAt       DateTime?
+  qualifiedBy       String?
+
+  // Assignment
+  assignedToId    String?
+  assignedTo      User?       @relation(fields: [assignedToId], references: [id])
+
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  convertedAt     DateTime?
+
+  followUps       FollowUp[]
+  surveys         Survey[]
+  quotes          Quote[]
+  job             Job?
+  communications  Communication[]
+}
+
+enum LeadSource {
+  WEBSITE
+  PHONE
+  REFERRAL
+  GOOGLE_ADS
+  FACEBOOK
+  YELP
+  THUMBTACK
+  OTHER
+}
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  QUALIFIED
+  SURVEY_SCHEDULED
+  QUOTED
+  NEGOTIATING
+  WON
+  LOST
+}
+
+enum MoveType {
+  LOCAL
+  LONG_DISTANCE
+  COMMERCIAL
+  STORAGE
+  PACKING_ONLY
+}
+
+enum PropertyType {
+  APARTMENT
+  HOUSE
+  CONDO
+  TOWNHOUSE
+  OFFICE
+  WAREHOUSE
+  STORAGE_UNIT
+}
+
+// Follow-up tracking
+model FollowUp {
+  id          String       @id @default(uuid())
+  leadId      String
+  lead        Lead         @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  type        FollowUpType
+  scheduledAt DateTime
+  completedAt DateTime?
+  notes       String?
+  outcome     String?
+  createdAt   DateTime     @default(now())
+}
+
+enum FollowUpType {
+  CALL
+  EMAIL
+  TEXT
+  IN_PERSON
+}
+
+// Survey/Estimating
+model Survey {
+  id              String      @id @default(uuid())
+  leadId          String
+  lead            Lead        @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  type            SurveyType
+  scheduledAt     DateTime
+  completedAt     DateTime?
+  conductedBy     String?
+
+  // Results
+  totalVolume     Float?
+  totalWeight     Float?
+  estimatedHours  Float?
+  accessNotes     String?
+  specialItems    String?
+  packingNeeded   Boolean     @default(false)
+  packingHours    Float?
+
+  photos          SurveyPhoto[]
+  inventoryItems  InventoryItem[]
+
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+}
+
+enum SurveyType {
+  VIRTUAL
+  ON_SITE
+}
+
+model SurveyPhoto {
+  id          String   @id @default(uuid())
+  surveyId    String
+  survey      Survey   @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+  url         String
+  room        String?
+  description String?
+  aiAnalysis  String?
+  createdAt   DateTime @default(now())
+}
+
+// Inventory
+model InventoryItem {
+  id            String    @id @default(uuid())
+  surveyId      String?
+  survey        Survey?   @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+  jobId         String?
+  job           Job?      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  name          String
+  category      ItemCategory
+  quantity      Int       @default(1)
+  volume        Float?
+  weight        Float?
+  isFragile     Boolean   @default(false)
+  requiresCrating Boolean @default(false)
+  specialHandling String?
+  condition     ItemCondition @default(GOOD)
+  conditionNotes String?
+
+  // Tracking
+  boxNumber     String?
+  labelId       String?
+  loadedAt      DateTime?
+  unloadedAt    DateTime?
+  verifiedAt    DateTime?
+
+  claims        Claim[]
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+enum ItemCategory {
+  FURNITURE
+  ELECTRONICS
+  APPLIANCE
+  BOXES
+  FRAGILE
+  ARTWORK
+  ANTIQUE
+  PIANO
+  POOL_TABLE
+  GYM_EQUIPMENT
+  OUTDOOR
+  GARAGE
+  OTHER
+}
+
+enum ItemCondition {
+  EXCELLENT
+  GOOD
+  FAIR
+  DAMAGED
+}
+
+// Quote Generation
+model Quote {
+  id              String      @id @default(uuid())
+  leadId          String
+  lead            Lead        @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  createdById     String
+  createdBy       User        @relation(fields: [createdById], references: [id])
+
+  quoteNumber     String      @unique
+  type            QuoteType
+  status          QuoteStatus @default(DRAFT)
+
+  // Labor
+  estimatedHours  Float
+  crewSize        Int
+  laborRate       Float
+  laborTotal      Float
+
+  // Travel
+  travelHours     Float?
+  travelRate      Float?
+  travelTotal     Float?
+
+  // Packing
+  packingHours    Float?
+  packingRate     Float?
+  packingTotal    Float?
+  packingMaterials Float?
+
+  // Additional
+  storageMonths   Int?
+  storageFee      Float?
+  insuranceOption InsuranceOption @default(BASIC)
+  insuranceFee    Float?
+
+  // Totals
+  subtotal        Float
+  discount        Float       @default(0)
+  discountReason  String?
+  taxes           Float       @default(0)
+  total           Float
+
+  validUntil      DateTime
+  acceptedAt      DateTime?
+  notes           String?
+
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  job             Job?
+}
+
+enum QuoteType {
+  BINDING
+  NON_BINDING
+  NOT_TO_EXCEED
+}
+
+enum QuoteStatus {
+  DRAFT
+  SENT
+  VIEWED
+  ACCEPTED
+  REJECTED
+  EXPIRED
+}
+
+enum InsuranceOption {
+  BASIC
+  FULL_VALUE
+  THIRD_PARTY
+}
+
+// Job Management
+model Job {
+  id              String    @id @default(uuid())
+  jobNumber       String    @unique
+  leadId          String    @unique
+  lead            Lead      @relation(fields: [leadId], references: [id])
+  quoteId         String    @unique
+  quote           Quote     @relation(fields: [quoteId], references: [id])
+  createdById     String
+  createdBy       User      @relation("CreatedJobs", fields: [createdById], references: [id])
+  assignedToId    String?
+  assignedTo      User?     @relation("AssignedJobs", fields: [assignedToId], references: [id])
+
+  status          JobStatus @default(SCHEDULED)
+  moveDate        DateTime
+  startTime       DateTime?
+  endTime         DateTime?
+
+  // Origin
+  originAddress   String
+  originCity      String
+  originState     String
+  originZip       String
+  originNotes     String?
+
+  // Destination
+  destAddress     String
+  destCity        String
+  destState       String
+  destZip         String
+  destNotes       String?
+
+  // Requirements
+  crewSize        Int
+  trucksNeeded    Int       @default(1)
+  equipmentNeeds  String?
+  specialInstructions String?
+
+  // Actuals
+  actualHours     Float?
+  actualCrewSize  Int?
+  actualMileage   Float?
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  completedAt     DateTime?
+
+  crewAssignments CrewAssignment[]
+  truckAssignments TruckAssignment[]
+  equipmentAssignments EquipmentAssignment[]
+  jobNotes        JobNote[]
+  inventoryItems  InventoryItem[]
+  timeEntries     TimeEntry[]
+  communications  Communication[]
+  invoice         Invoice?
+  claims          Claim[]
+}
+
+enum JobStatus {
+  SCHEDULED
+  CONFIRMED
+  IN_PROGRESS
+  LOADING
+  IN_TRANSIT
+  UNLOADING
+  COMPLETED
+  CANCELLED
+}
+
+model JobNote {
+  id        String   @id @default(uuid())
+  jobId     String
+  job       Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  content   String
+  createdBy String
+  createdAt DateTime @default(now())
+}
+
+// Crew Management
+model CrewMember {
+  id              String    @id @default(uuid())
+  userId          String?
+  firstName       String
+  lastName        String
+  email           String?
+  phone           String
+  role            CrewRole
+  hourlyRate      Float
+  isActive        Boolean   @default(true)
+  licenseType     String?
+  licenseExpiry   DateTime?
+
+  skills          String[]
+  certifications  String[]
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  assignments     CrewAssignment[]
+  timeEntries     TimeEntry[]
+}
+
+enum CrewRole {
+  DRIVER
+  CREW_LEAD
+  MOVER
+  PACKER
+}
+
+model CrewAssignment {
+  id            String     @id @default(uuid())
+  jobId         String
+  job           Job        @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  crewMemberId  String
+  crewMember    CrewMember @relation(fields: [crewMemberId], references: [id])
+  userId        String?
+  user          User?      @relation(fields: [userId], references: [id])
+  role          CrewRole
+  confirmedAt   DateTime?
+
+  createdAt     DateTime   @default(now())
+
+  @@unique([jobId, crewMemberId])
+}
+
+// Truck Management
+model Truck {
+  id              String    @id @default(uuid())
+  name            String
+  licensePlate    String    @unique
+  vin             String?
+  type            TruckType
+  capacity        Float     // cubic feet
+  maxWeight       Float     // lbs
+  year            Int?
+  make            String?
+  model           String?
+
+  isActive        Boolean   @default(true)
+  currentMileage  Float?
+  lastServiceDate DateTime?
+  nextServiceDue  DateTime?
+  insuranceExpiry DateTime?
+  registrationExpiry DateTime?
+
+  gpsDeviceId     String?
+  currentLocation String?
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  assignments     TruckAssignment[]
+}
+
+enum TruckType {
+  PICKUP
+  CARGO_VAN
+  BOX_TRUCK_12
+  BOX_TRUCK_16
+  BOX_TRUCK_20
+  BOX_TRUCK_26
+  SEMI
+}
+
+model TruckAssignment {
+  id        String   @id @default(uuid())
+  jobId     String
+  job       Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  truckId   String
+  truck     Truck    @relation(fields: [truckId], references: [id])
+
+  startMileage Float?
+  endMileage   Float?
+  fuelUsed     Float?
+
+  createdAt DateTime @default(now())
+
+  @@unique([jobId, truckId])
+}
+
+// Equipment Management
+model Equipment {
+  id          String        @id @default(uuid())
+  name        String
+  type        EquipmentType
+  quantity    Int           @default(1)
+  available   Int
+  condition   String?
+  location    String?
+
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  assignments EquipmentAssignment[]
+}
+
+enum EquipmentType {
+  DOLLY
+  HAND_TRUCK
+  FURNITURE_PAD
+  STRAP
+  TOOL_KIT
+  PIANO_BOARD
+  APPLIANCE_DOLLY
+  STAIR_CLIMBER
+  LIFT_GATE
+  CRATE
+}
+
+model EquipmentAssignment {
+  id          String    @id @default(uuid())
+  jobId       String
+  job         Job       @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  equipmentId String
+  equipment   Equipment @relation(fields: [equipmentId], references: [id])
+  quantity    Int       @default(1)
+  returnedAt  DateTime?
+  condition   String?
+
+  createdAt   DateTime  @default(now())
+
+  @@unique([jobId, equipmentId])
+}
+
+// Time Tracking
+model TimeEntry {
+  id            String     @id @default(uuid())
+  jobId         String
+  job           Job        @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  crewMemberId  String
+  crewMember    CrewMember @relation(fields: [crewMemberId], references: [id])
+
+  type          TimeEntryType
+  startTime     DateTime
+  endTime       DateTime?
+  duration      Float?     // hours
+  notes         String?
+
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+}
+
+enum TimeEntryType {
+  DRIVE_TO_ORIGIN
+  LOADING
+  DRIVE_TO_DEST
+  UNLOADING
+  BREAK
+  OTHER
+}
+
+// Storage Management
+model StorageUnit {
+  id          String   @id @default(uuid())
+  unitNumber  String   @unique
+  size        String   // e.g., "10x10", "5x5"
+  capacity    Float    // cubic feet
+  monthlyRate Float
+  isOccupied  Boolean  @default(false)
+  floor       Int?
+  climate     Boolean  @default(false)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  reservations StorageReservation[]
+}
+
+model StorageReservation {
+  id            String      @id @default(uuid())
+  unitId        String
+  unit          StorageUnit @relation(fields: [unitId], references: [id])
+  customerId    String
+  customerName  String
+  customerPhone String
+  customerEmail String
+
+  startDate     DateTime
+  endDate       DateTime?
+  monthlyRate   Float
+
+  status        StorageStatus @default(ACTIVE)
+
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+}
+
+enum StorageStatus {
+  RESERVED
+  ACTIVE
+  ENDED
+  OVERDUE
+}
+
+// Customer Communication
+model Communication {
+  id          String            @id @default(uuid())
+  leadId      String?
+  lead        Lead?             @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  jobId       String?
+  job         Job?              @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  userId      String?
+  user        User?             @relation(fields: [userId], references: [id])
+
+  type        CommunicationType
+  direction   CommunicationDirection
+  subject     String?
+  content     String
+  status      CommunicationStatus @default(SENT)
+
+  sentAt      DateTime?
+  deliveredAt DateTime?
+  readAt      DateTime?
+
+  templateId  String?
+  template    CommunicationTemplate? @relation(fields: [templateId], references: [id])
+
+  createdAt   DateTime          @default(now())
+}
+
+enum CommunicationType {
+  EMAIL
+  SMS
+  PHONE
+  IN_APP
+}
+
+enum CommunicationDirection {
+  INBOUND
+  OUTBOUND
+}
+
+enum CommunicationStatus {
+  DRAFT
+  SCHEDULED
+  SENT
+  DELIVERED
+  READ
+  FAILED
+}
+
+model CommunicationTemplate {
+  id          String            @id @default(uuid())
+  name        String
+  type        CommunicationType
+  trigger     TemplateTrigger?
+  subject     String?
+  content     String
+  isActive    Boolean           @default(true)
+
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  communications Communication[]
+}
+
+enum TemplateTrigger {
+  BOOKING_CONFIRMATION
+  PRE_MOVE_REMINDER_7DAY
+  PRE_MOVE_REMINDER_1DAY
+  DAY_OF_UPDATE
+  JOB_STARTED
+  JOB_COMPLETED
+  POST_MOVE_FOLLOWUP
+  REVIEW_REQUEST
+}
+
+// Billing and Invoicing
+model Invoice {
+  id            String        @id @default(uuid())
+  invoiceNumber String        @unique
+  jobId         String        @unique
+  job           Job           @relation(fields: [jobId], references: [id])
+
+  status        InvoiceStatus @default(DRAFT)
+
+  // Labor
+  laborHours    Float
+  laborRate     Float
+  laborTotal    Float
+
+  // Travel
+  travelHours   Float?
+  travelRate    Float?
+  travelTotal   Float?
+
+  // Materials
+  packingMaterials Float?
+
+  // Storage
+  storageCharges Float?
+
+  // Insurance
+  insuranceFee  Float?
+
+  // Additional charges
+  additionalCharges InvoiceCharge[]
+
+  // Totals
+  subtotal      Float
+  discount      Float         @default(0)
+  discountReason String?
+  taxes         Float         @default(0)
+  total         Float
+
+  dueDate       DateTime
+  paidAt        DateTime?
+  paidAmount    Float?
+  paymentMethod String?
+
+  notes         String?
+
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  payments      Payment[]
+}
+
+enum InvoiceStatus {
+  DRAFT
+  SENT
+  VIEWED
+  PARTIAL
+  PAID
+  OVERDUE
+  CANCELLED
+}
+
+model InvoiceCharge {
+  id          String  @id @default(uuid())
+  invoiceId   String
+  invoice     Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  description String
+  amount      Float
+  quantity    Int     @default(1)
+  total       Float
+}
+
+model Payment {
+  id          String        @id @default(uuid())
+  invoiceId   String
+  invoice     Invoice       @relation(fields: [invoiceId], references: [id])
+  amount      Float
+  method      PaymentMethod
+  reference   String?
+  notes       String?
+
+  processedAt DateTime      @default(now())
+  processedBy String?
+}
+
+enum PaymentMethod {
+  CASH
+  CHECK
+  CREDIT_CARD
+  DEBIT_CARD
+  ACH
+  ZELLE
+  VENMO
+  OTHER
+}
+
+// Claims
+model Claim {
+  id            String      @id @default(uuid())
+  claimNumber   String      @unique
+  jobId         String
+  job           Job         @relation(fields: [jobId], references: [id])
+  itemId        String?
+  item          InventoryItem? @relation(fields: [itemId], references: [id])
+
+  status        ClaimStatus @default(SUBMITTED)
+  type          ClaimType
+
+  description   String
+  damagePhotos  String[]
+  estimatedValue Float?
+  approvedAmount Float?
+
+  submittedAt   DateTime    @default(now())
+  reviewedAt    DateTime?
+  reviewedBy    String?
+  resolvedAt    DateTime?
+  resolution    String?
+
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+}
+
+enum ClaimStatus {
+  SUBMITTED
+  UNDER_REVIEW
+  APPROVED
+  DENIED
+  SETTLED
+}
+
+enum ClaimType {
+  DAMAGE
+  LOSS
+  DELAY
+  OTHER
+}
+
+// AI Features Data
+model AIVolumeEstimate {
+  id            String   @id @default(uuid())
+  photoUrl      String
+  roomType      String?
+  estimatedVolume Float
+  confidence    Float
+  itemsDetected String[]
+  analysis      String?
+  createdAt     DateTime @default(now())
+}
+
+model AIQuoteHistory {
+  id            String   @id @default(uuid())
+  leadId        String?
+  moveDetails   String   // JSON
+  generatedQuote Float
+  factors       String   // JSON
+  confidence    Float
+  createdAt     DateTime @default(now())
+}
+
+// Settings
+model CompanySettings {
+  id              String   @id @default(uuid())
+  companyName     String
+  address         String?
+  city            String?
+  state           String?
+  zip             String?
+  phone           String?
+  email           String?
+  website         String?
+  logo            String?
+
+  laborRate       Float    @default(50)
+  travelRate      Float    @default(35)
+  packingRate     Float    @default(40)
+  minHours        Float    @default(2)
+
+  taxRate         Float    @default(0)
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
