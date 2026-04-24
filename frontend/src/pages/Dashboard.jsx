@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { getDashboardOverview, getTodaySchedule, getRecentActivity, getPerformanceMetrics } from '../api';
 import { format } from 'date-fns';
+import { showToast } from '../components/Toast';
+import { DashboardSkeleton } from '../components/Skeleton';
 
 export default function Dashboard() {
   const [overview, setOverview] = useState(null);
@@ -23,22 +25,18 @@ export default function Dashboard() {
         setActivity(activityRes.data);
         setMetrics(metricsRes.data);
       })
-      .catch(console.error)
+      .catch(() => showToast.error('Failed to load dashboard data'))
       .finally(() => setLoading(false));
   }, []);
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
-    );
+    return <DashboardSkeleton />;
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
         <StatCard
           title="New Leads Today"
           value={overview?.leads?.today || 0}
@@ -66,29 +64,29 @@ export default function Dashboard() {
       </div>
 
       {/* Performance Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div className="card text-center">
-          <p className="text-sm text-gray-500">Conversion Rate</p>
-          <p className="text-2xl font-bold text-blue-600">{metrics?.conversionRate || 0}%</p>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
+        <div className="card text-center py-3 sm:py-6">
+          <p className="text-xs sm:text-sm text-gray-500">Conversion Rate</p>
+          <p className="text-lg sm:text-2xl font-bold text-blue-600">{metrics?.conversionRate || 0}%</p>
         </div>
-        <div className="card text-center">
-          <p className="text-sm text-gray-500">Quote Acceptance</p>
-          <p className="text-2xl font-bold text-green-600">{metrics?.quoteAcceptanceRate || 0}%</p>
+        <div className="card text-center py-3 sm:py-6">
+          <p className="text-xs sm:text-sm text-gray-500">Quote Acceptance</p>
+          <p className="text-lg sm:text-2xl font-bold text-green-600">{metrics?.quoteAcceptanceRate || 0}%</p>
         </div>
-        <div className="card text-center">
-          <p className="text-sm text-gray-500">Jobs Completed (30d)</p>
-          <p className="text-2xl font-bold text-purple-600">{metrics?.jobsCompleted || 0}</p>
+        <div className="card text-center py-3 sm:py-6">
+          <p className="text-xs sm:text-sm text-gray-500">Jobs Completed (30d)</p>
+          <p className="text-lg sm:text-2xl font-bold text-purple-600">{metrics?.jobsCompleted || 0}</p>
         </div>
-        <div className="card text-center">
-          <p className="text-sm text-gray-500">Avg. Job Value</p>
-          <p className="text-2xl font-bold text-yellow-600">${(metrics?.averageJobValue || 0).toFixed(0)}</p>
+        <div className="card text-center py-3 sm:py-6">
+          <p className="text-xs sm:text-sm text-gray-500">Avg. Job Value</p>
+          <p className="text-lg sm:text-2xl font-bold text-yellow-600">${(metrics?.averageJobValue || 0).toFixed(0)}</p>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
         {/* Today's Schedule */}
         <div className="card">
-          <h2 className="text-lg font-semibold mb-4">Today's Schedule</h2>
+          <h2 className="text-base sm:text-lg font-semibold mb-4">Today's Schedule</h2>
           {today?.jobs?.length === 0 && today?.surveys?.length === 0 && today?.followUps?.length === 0 ? (
             <p className="text-gray-500 text-center py-4">No scheduled activities for today</p>
           ) : (
@@ -100,39 +98,39 @@ export default function Dashboard() {
                   className="block p-3 bg-blue-50 rounded-lg hover:bg-blue-100 transition"
                 >
                   <div className="flex justify-between items-start">
-                    <div>
-                      <p className="font-medium text-blue-900">{job.jobNumber}</p>
-                      <p className="text-sm text-blue-700">
+                    <div className="min-w-0 mr-2">
+                      <p className="font-medium text-blue-900 text-sm truncate">{job.jobNumber}</p>
+                      <p className="text-xs sm:text-sm text-blue-700 truncate">
                         {job.lead?.firstName} {job.lead?.lastName}
                       </p>
                     </div>
-                    <span className="badge badge-blue">{job.status}</span>
+                    <span className="badge badge-blue text-xs flex-shrink-0">{job.status}</span>
                   </div>
                 </Link>
               ))}
               {today?.surveys?.map((survey) => (
                 <div key={survey.id} className="p-3 bg-green-50 rounded-lg">
                   <div className="flex justify-between items-start">
-                    <div>
-                      <p className="font-medium text-green-900">{survey.type} Survey</p>
-                      <p className="text-sm text-green-700">
+                    <div className="min-w-0 mr-2">
+                      <p className="font-medium text-green-900 text-sm truncate">{survey.type} Survey</p>
+                      <p className="text-xs sm:text-sm text-green-700 truncate">
                         {survey.lead?.firstName} {survey.lead?.lastName}
                       </p>
                     </div>
-                    <span className="badge badge-green">Survey</span>
+                    <span className="badge badge-green text-xs flex-shrink-0">Survey</span>
                   </div>
                 </div>
               ))}
               {today?.followUps?.map((followUp) => (
                 <div key={followUp.id} className="p-3 bg-yellow-50 rounded-lg">
                   <div className="flex justify-between items-start">
-                    <div>
-                      <p className="font-medium text-yellow-900">{followUp.type} Follow-up</p>
-                      <p className="text-sm text-yellow-700">
+                    <div className="min-w-0 mr-2">
+                      <p className="font-medium text-yellow-900 text-sm truncate">{followUp.type} Follow-up</p>
+                      <p className="text-xs sm:text-sm text-yellow-700 truncate">
                         {followUp.lead?.firstName} {followUp.lead?.lastName}
                       </p>
                     </div>
-                    <span className="badge badge-yellow">Follow-up</span>
+                    <span className="badge badge-yellow text-xs flex-shrink-0">Follow-up</span>
                   </div>
                 </div>
               ))}
@@ -142,7 +140,7 @@ export default function Dashboard() {
 
         {/* Recent Activity */}
         <div className="card">
-          <h2 className="text-lg font-semibold mb-4">Recent Activity</h2>
+          <h2 className="text-base sm:text-lg font-semibold mb-4">Recent Activity</h2>
           <div className="space-y-3">
             {activity?.recentLeads?.map((lead) => (
               <Link
@@ -151,13 +149,13 @@ export default function Dashboard() {
                 className="block p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition"
               >
                 <div className="flex justify-between items-start">
-                  <div>
-                    <p className="font-medium">New Lead: {lead.firstName} {lead.lastName}</p>
-                    <p className="text-sm text-gray-500">
+                  <div className="min-w-0 mr-2">
+                    <p className="font-medium text-sm truncate">New Lead: {lead.firstName} {lead.lastName}</p>
+                    <p className="text-xs text-gray-500">
                       {format(new Date(lead.createdAt), 'MMM d, h:mm a')}
                     </p>
                   </div>
-                  <span className="badge badge-blue">{lead.source}</span>
+                  <span className="badge badge-blue text-xs flex-shrink-0">{lead.source}</span>
                 </div>
               </Link>
             ))}
@@ -168,13 +166,13 @@ export default function Dashboard() {
                 className="block p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition"
               >
                 <div className="flex justify-between items-start">
-                  <div>
-                    <p className="font-medium">Quote {quote.quoteNumber}</p>
-                    <p className="text-sm text-gray-500">
-                      {quote.lead?.firstName} {quote.lead?.lastName} - ${quote.total.toLocaleString()}
+                  <div className="min-w-0 mr-2">
+                    <p className="font-medium text-sm truncate">Quote {quote.quoteNumber}</p>
+                    <p className="text-xs text-gray-500 truncate">
+                      {quote.lead?.firstName} {quote.lead?.lastName} - ${quote.total?.toLocaleString()}
                     </p>
                   </div>
-                  <span className={`badge ${quote.status === 'ACCEPTED' ? 'badge-green' : 'badge-gray'}`}>
+                  <span className={`badge text-xs flex-shrink-0 ${quote.status === 'ACCEPTED' ? 'badge-green' : 'badge-gray'}`}>
                     {quote.status}
                   </span>
                 </div>
@@ -196,10 +194,10 @@ function StatCard({ title, value, subtitle, color }) {
   };
 
   return (
-    <div className={`card border ${colors[color]}`}>
-      <p className="text-sm text-gray-500">{title}</p>
-      <p className="text-3xl font-bold mt-1">{value}</p>
-      <p className="text-sm text-gray-500 mt-1">{subtitle}</p>
+    <div className={`card border p-3 sm:p-6 ${colors[color]}`}>
+      <p className="text-xs sm:text-sm text-gray-500">{title}</p>
+      <p className="text-xl sm:text-3xl font-bold mt-1">{value}</p>
+      <p className="text-xs sm:text-sm text-gray-500 mt-1">{subtitle}</p>
     </div>
   );
 }

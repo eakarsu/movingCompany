@@ -1,6 +1,7 @@
 const express = require('express');
 const { PrismaClient } = require('@prisma/client');
 const { authenticate } = require('../middleware/auth');
+const { parsePaginationParams, paginatedResponse } = require('../utils/pagination');
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -9,38 +10,74 @@ const prisma = new PrismaClient();
 router.get('/', authenticate, async (req, res) => {
   try {
     const { status, leadId, type } = req.query;
+    const { page, limit, skip, sortBy, sortOrder } = parsePaginationParams(req.query);
 
     const where = {};
     if (status) where.status = status;
     if (leadId) where.leadId = leadId;
     if (type) where.type = type;
 
-    const quotes = await prisma.quote.findMany({
-      where,
-      include: {
-        lead: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true,
-            phone: true,
-            moveDate: true,
-            originCity: true,
-            destCity: true,
+    const [quotes, total] = await Promise.all([
+      prisma.quote.findMany({
+        where,
+        include: {
+          lead: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+              phone: true,
+              moveDate: true,
+              originCity: true,
+              destCity: true,
+            },
+          },
+          createdBy: {
+            select: { id: true, firstName: true, lastName: true },
           },
         },
-        createdBy: {
-          select: { id: true, firstName: true, lastName: true },
-        },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
+        orderBy: { [sortBy]: sortOrder },
+        skip,
+        take: limit,
+      }),
+      prisma.quote.count({ where }),
+    ]);
 
-    res.json(quotes);
+    res.json(paginatedResponse(quotes, total, page, limit));
   } catch (error) {
     console.error('Get quotes error:', error);
     res.status(500).json({ error: 'Failed to get quotes' });
+  }
+});
+
+// Bulk delete
+router.post('/bulk-delete', authenticate, async (req, res) => {
+  try {
+    const { ids } = req.body;
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ error: 'ids array is required' });
+    }
+    const result = await prisma.quote.deleteMany({ where: { id: { in: ids } } });
+    res.json({ message: `${result.count} items deleted`, count: result.count });
+  } catch (error) {
+    console.error('Bulk delete error:', error);
+    res.status(500).json({ error: 'Bulk delete failed' });
+  }
+});
+
+// Bulk update
+router.put('/bulk-update', authenticate, async (req, res) => {
+  try {
+    const { ids, data } = req.body;
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ error: 'ids array is required' });
+    }
+    const result = await prisma.quote.updateMany({ where: { id: { in: ids } }, data });
+    res.json({ message: `${result.count} items updated`, count: result.count });
+  } catch (error) {
+    console.error('Bulk update error:', error);
+    res.status(500).json({ error: 'Bulk update failed' });
   }
 });
 

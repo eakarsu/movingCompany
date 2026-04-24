@@ -1,6 +1,7 @@
 const express = require('express');
 const { PrismaClient } = require('@prisma/client');
 const { authenticate } = require('../middleware/auth');
+const { parsePaginationParams, paginatedResponse } = require('../utils/pagination');
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -9,6 +10,7 @@ const prisma = new PrismaClient();
 router.get('/', authenticate, async (req, res) => {
   try {
     const { type, leadId, completed } = req.query;
+    const { page, limit, skip, sortBy, sortOrder } = parsePaginationParams(req.query);
 
     const where = {};
     if (type) where.type = type;
@@ -16,26 +18,31 @@ router.get('/', authenticate, async (req, res) => {
     if (completed === 'true') where.completedAt = { not: null };
     if (completed === 'false') where.completedAt = null;
 
-    const surveys = await prisma.survey.findMany({
-      where,
-      include: {
-        lead: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            phone: true,
-            originAddress: true,
+    const [surveys, total] = await Promise.all([
+      prisma.survey.findMany({
+        where,
+        include: {
+          lead: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              phone: true,
+              originAddress: true,
+            },
+          },
+          _count: {
+            select: { photos: true, inventoryItems: true },
           },
         },
-        _count: {
-          select: { photos: true, inventoryItems: true },
-        },
-      },
-      orderBy: { scheduledAt: 'desc' },
-    });
+        orderBy: { [sortBy]: sortOrder },
+        skip,
+        take: limit,
+      }),
+      prisma.survey.count({ where }),
+    ]);
 
-    res.json(surveys);
+    res.json(paginatedResponse(surveys, total, page, limit));
   } catch (error) {
     console.error('Get surveys error:', error);
     res.status(500).json({ error: 'Failed to get surveys' });

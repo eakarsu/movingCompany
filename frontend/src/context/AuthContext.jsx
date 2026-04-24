@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react';
-import { login as apiLogin, register as apiRegister, getMe } from '../api';
+import { login as apiLogin, register as apiRegister, logout as apiLogout, getMe } from '../api';
 
 const AuthContext = createContext(null);
 
@@ -44,7 +44,12 @@ export function AuthProvider({ children }) {
     return user;
   };
 
-  const logout = () => {
+  const logout = async () => {
+    try {
+      await apiLogout();
+    } catch (e) {
+      // Continue with local logout even if API call fails
+    }
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     setUser(null);

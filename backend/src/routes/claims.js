@@ -1,6 +1,7 @@
 const express = require('express');
 const { PrismaClient } = require('@prisma/client');
 const { authenticate } = require('../middleware/auth');
+const { parsePaginationParams, paginatedResponse } = require('../utils/pagination');
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -9,33 +10,69 @@ const prisma = new PrismaClient();
 router.get('/', authenticate, async (req, res) => {
   try {
     const { status, type, jobId } = req.query;
+    const { page, limit, skip, sortBy, sortOrder } = parsePaginationParams(req.query);
 
     const where = {};
     if (status) where.status = status;
     if (type) where.type = type;
     if (jobId) where.jobId = jobId;
 
-    const claims = await prisma.claim.findMany({
-      where,
-      include: {
-        job: {
-          include: {
-            lead: {
-              select: { firstName: true, lastName: true, email: true, phone: true },
+    const [claims, total] = await Promise.all([
+      prisma.claim.findMany({
+        where,
+        include: {
+          job: {
+            include: {
+              lead: {
+                select: { firstName: true, lastName: true, email: true, phone: true },
+              },
             },
           },
+          item: {
+            select: { id: true, name: true, category: true },
+          },
         },
-        item: {
-          select: { id: true, name: true, category: true },
-        },
-      },
-      orderBy: { submittedAt: 'desc' },
-    });
+        orderBy: { [sortBy]: sortOrder },
+        skip,
+        take: limit,
+      }),
+      prisma.claim.count({ where }),
+    ]);
 
-    res.json(claims);
+    res.json(paginatedResponse(claims, total, page, limit));
   } catch (error) {
     console.error('Get claims error:', error);
     res.status(500).json({ error: 'Failed to get claims' });
+  }
+});
+
+// Bulk delete
+router.post('/bulk-delete', authenticate, async (req, res) => {
+  try {
+    const { ids } = req.body;
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ error: 'ids array is required' });
+    }
+    const result = await prisma.claim.deleteMany({ where: { id: { in: ids } } });
+    res.json({ message: `${result.count} items deleted`, count: result.count });
+  } catch (error) {
+    console.error('Bulk delete error:', error);
+    res.status(500).json({ error: 'Bulk delete failed' });
+  }
+});
+
+// Bulk update
+router.put('/bulk-update', authenticate, async (req, res) => {
+  try {
+    const { ids, data } = req.body;
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ error: 'ids array is required' });
+    }
+    const result = await prisma.claim.updateMany({ where: { id: { in: ids } }, data });
+    res.json({ message: `${result.count} items updated`, count: result.count });
+  } catch (error) {
+    console.error('Bulk update error:', error);
+    res.status(500).json({ error: 'Bulk update failed' });
   }
 });
 

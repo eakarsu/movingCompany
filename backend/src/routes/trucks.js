@@ -1,6 +1,7 @@
 const express = require('express');
 const { PrismaClient } = require('@prisma/client');
 const { authenticate } = require('../middleware/auth');
+const { parsePaginationParams, paginatedResponse } = require('../utils/pagination');
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -9,20 +10,56 @@ const prisma = new PrismaClient();
 router.get('/', authenticate, async (req, res) => {
   try {
     const { type, isActive } = req.query;
+    const { page, limit, skip, sortBy, sortOrder } = parsePaginationParams(req.query);
 
     const where = {};
     if (type) where.type = type;
     if (isActive !== undefined) where.isActive = isActive === 'true';
 
-    const trucks = await prisma.truck.findMany({
-      where,
-      orderBy: { name: 'asc' },
-    });
+    const [trucks, total] = await Promise.all([
+      prisma.truck.findMany({
+        where,
+        orderBy: { [sortBy]: sortOrder },
+        skip,
+        take: limit,
+      }),
+      prisma.truck.count({ where }),
+    ]);
 
-    res.json(trucks);
+    res.json(paginatedResponse(trucks, total, page, limit));
   } catch (error) {
     console.error('Get trucks error:', error);
     res.status(500).json({ error: 'Failed to get trucks' });
+  }
+});
+
+// Bulk delete
+router.post('/bulk-delete', authenticate, async (req, res) => {
+  try {
+    const { ids } = req.body;
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ error: 'ids array is required' });
+    }
+    const result = await prisma.truck.deleteMany({ where: { id: { in: ids } } });
+    res.json({ message: `${result.count} items deleted`, count: result.count });
+  } catch (error) {
+    console.error('Bulk delete error:', error);
+    res.status(500).json({ error: 'Bulk delete failed' });
+  }
+});
+
+// Bulk update
+router.put('/bulk-update', authenticate, async (req, res) => {
+  try {
+    const { ids, data } = req.body;
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ error: 'ids array is required' });
+    }
+    const result = await prisma.truck.updateMany({ where: { id: { in: ids } }, data });
+    res.json({ message: `${result.count} items updated`, count: result.count });
+  } catch (error) {
+    console.error('Bulk update error:', error);
+    res.status(500).json({ error: 'Bulk update failed' });
   }
 });
 

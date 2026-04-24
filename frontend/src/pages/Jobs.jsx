@@ -1,49 +1,137 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { getJobs, getEnums, getLeads, getQuotes, createJob } from '../api';
+import { getJobs, getEnums, getLeads, getQuotes, createJob, bulkDeleteJobs, bulkUpdateJobs } from '../api';
 import { format } from 'date-fns';
+import { showToast } from '../components/Toast';
+import { useConfirm } from '../components/ConfirmDialog';
+import Pagination from '../components/Pagination';
+import SortHeader from '../components/SortHeader';
+import BulkActions, { SelectCheckbox } from '../components/BulkActions';
+import { TableSkeleton } from '../components/Skeleton';
+import { exportToCSV, exportToPDF } from '../utils/export';
+
+const exportColumns = [
+  { key: 'jobNumber', label: 'Job #' },
+  { label: 'Customer', accessor: (row) => `${row.lead?.firstName || ''} ${row.lead?.lastName || ''}`.trim() },
+  { label: 'Phone', accessor: (row) => row.lead?.phone || '' },
+  { label: 'Move Date', accessor: (row) => row.moveDate ? format(new Date(row.moveDate), 'MMM d, yyyy') : '' },
+  { key: 'status', label: 'Status' },
+  { label: 'Origin', accessor: (row) => `${row.originAddress || ''}, ${row.originCity || ''}, ${row.originState || ''} ${row.originZip || ''}`.trim() },
+  { label: 'Destination', accessor: (row) => `${row.destAddress || ''}, ${row.destCity || ''}, ${row.destState || ''} ${row.destZip || ''}`.trim() },
+  { label: 'Route', accessor: (row) => `${row.originCity || ''} → ${row.destCity || ''}` },
+  { key: 'crewSize', label: 'Crew Size' },
+  { key: 'trucksNeeded', label: 'Trucks' },
+  { label: 'Total Amount', accessor: (row) => row.totalAmount != null ? `$${Number(row.totalAmount).toLocaleString()}` : '' },
+  { label: 'Created', accessor: (row) => row.createdAt ? format(new Date(row.createdAt), 'MMM d, yyyy') : '' },
+];
+
+const bulkUpdateOptions = [
+  { label: 'Set Status: Scheduled', value: 'status:SCHEDULED' },
+  { label: 'Set Status: In Progress', value: 'status:IN_PROGRESS' },
+  { label: 'Set Status: Completed', value: 'status:COMPLETED' },
+  { label: 'Set Status: Cancelled', value: 'status:CANCELLED' },
+];
 
 export default function Jobs() {
   const [jobs, setJobs] = useState([]);
+  const [pagination, setPagination] = useState(null);
   const [leads, setLeads] = useState([]);
   const [quotes, setQuotes] = useState([]);
   const [enums, setEnums] = useState(null);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState({ status: '' });
+  const [sortBy, setSortBy] = useState('createdAt');
+  const [sortOrder, setSortOrder] = useState('desc');
+  const [page, setPage] = useState(1);
+  const [selectedIds, setSelectedIds] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const navigate = useNavigate();
+  const confirm = useConfirm();
 
-  useEffect(() => {
-    loadData();
-  }, [filter]);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
+      setLoading(true);
       const [jobsRes, enumsRes, leadsRes, quotesRes] = await Promise.all([
-        getJobs(filter),
+        getJobs({ ...filter, page, sortBy, sortOrder }),
         getEnums(),
         getLeads({ status: 'QUOTED' }),
         getQuotes({ status: 'ACCEPTED' }),
       ]);
-      setJobs(jobsRes.data);
+      const jobsData = jobsRes.data;
+      setJobs(jobsData.data || jobsData);
+      setPagination(jobsData.pagination || null);
       setEnums(enumsRes.data);
-      setLeads(leadsRes.data.leads || []);
+      setLeads(leadsRes.data.leads || leadsRes.data.data || []);
       setQuotes(quotesRes.data || []);
+      setSelectedIds([]);
     } catch (error) {
-      console.error('Error loading jobs:', error);
+      showToast.error('Failed to load jobs');
     } finally {
       setLoading(false);
     }
-  };
+  }, [filter, page, sortBy, sortOrder]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   const handleCreateJob = async (data) => {
     try {
       const response = await createJob(data);
+      showToast.success('Job created successfully');
       setShowModal(false);
       navigate(`/jobs/${response.data.id}`);
     } catch (error) {
-      console.error('Error creating job:', error);
+      showToast.error('Failed to create job');
     }
+  };
+
+  const handleSort = (field, order) => {
+    setSortBy(field);
+    setSortOrder(order);
+    setPage(1);
+  };
+
+  const handleBulkDelete = async () => {
+    const confirmed = await confirm({
+      title: 'Delete Selected Jobs',
+      message: `Are you sure you want to delete ${selectedIds.length} job(s)? This action cannot be undone.`,
+      confirmLabel: 'Delete',
+      variant: 'danger',
+    });
+    if (confirmed) {
+      try {
+        await bulkDeleteJobs(selectedIds);
+        showToast.success(`${selectedIds.length} job(s) deleted`);
+        loadData();
+      } catch (error) {
+        showToast.error('Failed to delete jobs');
+      }
+    }
+  };
+
+  const handleBulkUpdate = async (data) => {
+    try {
+      await bulkUpdateJobs(selectedIds, data);
+      showToast.success(`${selectedIds.length} job(s) updated`);
+      loadData();
+    } catch (error) {
+      showToast.error('Failed to update jobs');
+    }
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.length === jobs.length) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(jobs.map((j) => j.id));
+    }
+  };
+
+  const toggleSelect = (id) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
+    );
   };
 
   const getStatusColor = (status) => {
@@ -60,69 +148,110 @@ export default function Jobs() {
     return colors[status] || 'badge-gray';
   };
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
-    );
+  if (loading && !jobs.length) {
+    return <TableSkeleton rows={8} cols={7} />;
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <select
-          value={filter.status}
-          onChange={(e) => setFilter({ ...filter, status: e.target.value })}
-          className="select w-40"
-        >
-          <option value="">All Statuses</option>
-          {enums?.jobStatuses?.map((status) => (
-            <option key={status} value={status}>{status.replace(/_/g, ' ')}</option>
-          ))}
-        </select>
-        <button onClick={() => setShowModal(true)} className="btn-primary">
-          + New Job
-        </button>
+    <div className="space-y-4 sm:space-y-6">
+      {/* Filters and Actions */}
+      <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 sm:items-center sm:justify-between">
+        <div className="flex flex-wrap gap-2 sm:gap-4">
+          <select
+            value={filter.status}
+            onChange={(e) => { setFilter({ ...filter, status: e.target.value }); setPage(1); }}
+            className="select w-full sm:w-40"
+          >
+            <option value="">All Statuses</option>
+            {enums?.jobStatuses?.map((status) => (
+              <option key={status} value={status}>{status.replace(/_/g, ' ')}</option>
+            ))}
+          </select>
+        </div>
+        <div className="flex gap-2">
+          <button onClick={() => exportToCSV(jobs, exportColumns, 'jobs')} className="btn-secondary text-sm">
+            CSV
+          </button>
+          <button onClick={() => exportToPDF(jobs, exportColumns, 'jobs', 'Jobs Report')} className="btn-secondary text-sm">
+            PDF
+          </button>
+          <button onClick={() => setShowModal(true)} className="btn-primary text-sm">
+            + New Job
+          </button>
+        </div>
       </div>
 
-      <div className="card overflow-hidden">
+      {/* Bulk Actions */}
+      <BulkActions
+        selectedCount={selectedIds.length}
+        onDelete={handleBulkDelete}
+        onUpdate={handleBulkUpdate}
+        updateOptions={bulkUpdateOptions}
+      />
+
+      {/* Jobs Table */}
+      <div className="card overflow-x-auto">
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
-              <th className="px-6 py-3 table-header">Job #</th>
-              <th className="px-6 py-3 table-header">Customer</th>
-              <th className="px-6 py-3 table-header">Route</th>
-              <th className="px-6 py-3 table-header">Move Date</th>
-              <th className="px-6 py-3 table-header">Crew</th>
-              <th className="px-6 py-3 table-header">Status</th>
-              <th className="px-6 py-3 table-header">Actions</th>
+              <th className="px-4 py-3">
+                <SelectCheckbox
+                  checked={selectedIds.length === jobs.length && jobs.length > 0}
+                  indeterminate={selectedIds.length > 0 && selectedIds.length < jobs.length}
+                  onChange={toggleSelectAll}
+                />
+              </th>
+              <th className="px-4 py-3 table-header">Job #</th>
+              <th className="px-4 py-3 table-header">Customer</th>
+              <th className="px-4 py-3 table-header hidden md:table-cell">Route</th>
+              <th className="px-4 py-3">
+                <SortHeader label="Move Date" field="moveDate" currentSort={sortBy} currentOrder={sortOrder} onSort={handleSort} />
+              </th>
+              <th className="px-4 py-3 table-header hidden lg:table-cell">Crew</th>
+              <th className="px-4 py-3">
+                <SortHeader label="Status" field="status" currentSort={sortBy} currentOrder={sortOrder} onSort={handleSort} />
+              </th>
+              <th className="px-4 py-3 hidden lg:table-cell">
+                <SortHeader label="Created" field="createdAt" currentSort={sortBy} currentOrder={sortOrder} onSort={handleSort} />
+              </th>
+              <th className="px-4 py-3 table-header">Actions</th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {jobs.map((job) => (
               <tr key={job.id} className="hover:bg-gray-50">
-                <td className="px-6 py-4 font-medium">{job.jobNumber}</td>
-                <td className="px-6 py-4">
-                  <p>{job.lead?.firstName} {job.lead?.lastName}</p>
-                  <p className="text-sm text-gray-500">{job.lead?.phone}</p>
+                <td className="px-4 py-3">
+                  <SelectCheckbox
+                    checked={selectedIds.includes(job.id)}
+                    onChange={() => toggleSelect(job.id)}
+                  />
                 </td>
-                <td className="px-6 py-4">
+                <td className="px-4 py-3 font-medium text-sm">{job.jobNumber}</td>
+                <td className="px-4 py-3">
+                  <div>
+                    <p className="font-medium text-sm">{job.lead?.firstName} {job.lead?.lastName}</p>
+                    <p className="text-xs text-gray-500">{job.lead?.phone}</p>
+                  </div>
+                </td>
+                <td className="px-4 py-3 hidden md:table-cell">
                   <p className="text-sm">{job.originCity} → {job.destCity}</p>
                 </td>
-                <td className="px-6 py-4">
-                  {format(new Date(job.moveDate), 'MMM d, yyyy')}
+                <td className="px-4 py-3 text-sm">
+                  {job.moveDate ? format(new Date(job.moveDate), 'MMM d, yyyy') : ''}
                 </td>
-                <td className="px-6 py-4">
-                  <p>{job.crewAssignments?.length || 0} / {job.crewSize}</p>
+                <td className="px-4 py-3 hidden lg:table-cell">
+                  <p className="text-sm">{job.crewAssignments?.length || 0} / {job.crewSize}</p>
                 </td>
-                <td className="px-6 py-4">
-                  <span className={`badge ${getStatusColor(job.status)}`}>
+                <td className="px-4 py-3">
+                  <span className={`badge ${getStatusColor(job.status)} text-xs`}>
                     {job.status?.replace(/_/g, ' ')}
                   </span>
                 </td>
-                <td className="px-6 py-4">
-                  <Link to={`/jobs/${job.id}`} className="text-blue-600 hover:text-blue-800">
+                <td className="px-4 py-3 text-sm text-gray-500 hidden lg:table-cell">
+                  {job.createdAt ? format(new Date(job.createdAt), 'MMM d, yyyy') : ''}
+                </td>
+                <td className="px-4 py-3">
+                  <Link to={`/jobs/${job.id}`} className="text-blue-600 hover:text-blue-800 text-sm">
                     View
                   </Link>
                 </td>
@@ -130,11 +259,15 @@ export default function Jobs() {
             ))}
           </tbody>
         </table>
-        {jobs.length === 0 && (
+        {jobs.length === 0 && !loading && (
           <p className="text-center py-8 text-gray-500">No jobs found</p>
         )}
       </div>
 
+      {/* Pagination */}
+      <Pagination pagination={pagination} onPageChange={setPage} />
+
+      {/* Create Job Modal */}
       {showModal && (
         <JobModal
           leads={leads}
@@ -211,12 +344,12 @@ function JobModal({ leads, quotes, enums, onClose, onSubmit }) {
   const leadQuotes = quotes.filter(q => q.leadId === formData.leadId);
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100]">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100] p-4">
       <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-        <div className="p-6 border-b">
+        <div className="p-4 sm:p-6 border-b">
           <h2 className="text-xl font-semibold">New Job</h2>
         </div>
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4">
           <div>
             <label className="block text-sm font-medium mb-1">Select Lead *</label>
             <select
@@ -268,7 +401,7 @@ function JobModal({ leads, quotes, enums, onClose, onSubmit }) {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium mb-1">Crew Size</label>
                   <input
@@ -293,8 +426,8 @@ function JobModal({ leads, quotes, enums, onClose, onSubmit }) {
 
               <div className="border-t pt-4">
                 <h3 className="font-medium mb-2">Origin</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="col-span-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="sm:col-span-2">
                     <input
                       type="text"
                       value={formData.originAddress}
@@ -335,8 +468,8 @@ function JobModal({ leads, quotes, enums, onClose, onSubmit }) {
 
               <div className="border-t pt-4">
                 <h3 className="font-medium mb-2">Destination</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="col-span-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="sm:col-span-2">
                     <input
                       type="text"
                       value={formData.destAddress}

@@ -1,6 +1,7 @@
 const express = require('express');
 const { PrismaClient } = require('@prisma/client');
 const { authenticate } = require('../middleware/auth');
+const { parsePaginationParams, paginatedResponse } = require('../utils/pagination');
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -9,29 +10,65 @@ const prisma = new PrismaClient();
 router.get('/', authenticate, async (req, res) => {
   try {
     const { status } = req.query;
+    const { page, limit, skip, sortBy, sortOrder } = parsePaginationParams(req.query);
 
     const where = {};
     if (status) where.status = status;
 
-    const invoices = await prisma.invoice.findMany({
-      where,
-      include: {
-        job: {
-          include: {
-            lead: {
-              select: { firstName: true, lastName: true, email: true, phone: true },
+    const [invoices, total] = await Promise.all([
+      prisma.invoice.findMany({
+        where,
+        include: {
+          job: {
+            include: {
+              lead: {
+                select: { firstName: true, lastName: true, email: true, phone: true },
+              },
             },
           },
+          payments: true,
         },
-        payments: true,
-      },
-      orderBy: { createdAt: 'desc' },
-    });
+        orderBy: { [sortBy]: sortOrder },
+        skip,
+        take: limit,
+      }),
+      prisma.invoice.count({ where }),
+    ]);
 
-    res.json(invoices);
+    res.json(paginatedResponse(invoices, total, page, limit));
   } catch (error) {
     console.error('Get invoices error:', error);
     res.status(500).json({ error: 'Failed to get invoices' });
+  }
+});
+
+// Bulk delete
+router.post('/bulk-delete', authenticate, async (req, res) => {
+  try {
+    const { ids } = req.body;
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ error: 'ids array is required' });
+    }
+    const result = await prisma.invoice.deleteMany({ where: { id: { in: ids } } });
+    res.json({ message: `${result.count} items deleted`, count: result.count });
+  } catch (error) {
+    console.error('Bulk delete error:', error);
+    res.status(500).json({ error: 'Bulk delete failed' });
+  }
+});
+
+// Bulk update
+router.put('/bulk-update', authenticate, async (req, res) => {
+  try {
+    const { ids, data } = req.body;
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ error: 'ids array is required' });
+    }
+    const result = await prisma.invoice.updateMany({ where: { id: { in: ids } }, data });
+    res.json({ message: `${result.count} items updated`, count: result.count });
+  } catch (error) {
+    console.error('Bulk update error:', error);
+    res.status(500).json({ error: 'Bulk update failed' });
   }
 });
 

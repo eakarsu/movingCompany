@@ -1,6 +1,7 @@
 const express = require('express');
 const { PrismaClient } = require('@prisma/client');
 const { authenticate } = require('../middleware/auth');
+const { parsePaginationParams, paginatedResponse } = require('../utils/pagination');
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -9,25 +10,31 @@ const prisma = new PrismaClient();
 router.get('/units', authenticate, async (req, res) => {
   try {
     const { size, isOccupied, climate } = req.query;
+    const { page, limit, skip, sortBy, sortOrder } = parsePaginationParams(req.query);
 
     const where = {};
     if (size) where.size = size;
     if (isOccupied !== undefined) where.isOccupied = isOccupied === 'true';
     if (climate !== undefined) where.climate = climate === 'true';
 
-    const units = await prisma.storageUnit.findMany({
-      where,
-      include: {
-        reservations: {
-          where: {
-            status: 'ACTIVE',
+    const [units, total] = await Promise.all([
+      prisma.storageUnit.findMany({
+        where,
+        include: {
+          reservations: {
+            where: {
+              status: 'ACTIVE',
+            },
           },
         },
-      },
-      orderBy: { unitNumber: 'asc' },
-    });
+        orderBy: { [sortBy]: sortOrder },
+        skip,
+        take: limit,
+      }),
+      prisma.storageUnit.count({ where }),
+    ]);
 
-    res.json(units);
+    res.json(paginatedResponse(units, total, page, limit));
   } catch (error) {
     console.error('Get storage units error:', error);
     res.status(500).json({ error: 'Failed to get storage units' });
@@ -104,20 +111,26 @@ router.delete('/units/:id', authenticate, async (req, res) => {
 router.get('/reservations', authenticate, async (req, res) => {
   try {
     const { status, unitId } = req.query;
+    const { page, limit, skip, sortBy, sortOrder } = parsePaginationParams(req.query);
 
     const where = {};
     if (status) where.status = status;
     if (unitId) where.unitId = unitId;
 
-    const reservations = await prisma.storageReservation.findMany({
-      where,
-      include: {
-        unit: true,
-      },
-      orderBy: { startDate: 'desc' },
-    });
+    const [reservations, total] = await Promise.all([
+      prisma.storageReservation.findMany({
+        where,
+        include: {
+          unit: true,
+        },
+        orderBy: { [sortBy]: sortOrder },
+        skip,
+        take: limit,
+      }),
+      prisma.storageReservation.count({ where }),
+    ]);
 
-    res.json(reservations);
+    res.json(paginatedResponse(reservations, total, page, limit));
   } catch (error) {
     console.error('Get reservations error:', error);
     res.status(500).json({ error: 'Failed to get reservations' });

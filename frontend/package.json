@@ -8,11 +8,15 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "react-router-dom": "^6.20.0",
     "axios": "^1.6.2",
     "date-fns": "^2.30.0",
+    "jspdf": "^4.1.0",
+    "jspdf-autotable": "^5.0.7",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-error-boundary": "^6.1.1",
+    "react-router-dom": "^6.20.0",
+    "react-toastify": "^11.0.5",
     "recharts": "^2.10.3"
   },
   "devDependencies": {

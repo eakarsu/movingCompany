@@ -1,6 +1,7 @@
 const express = require('express');
 const { PrismaClient } = require('@prisma/client');
 const { authenticate } = require('../middleware/auth');
+const { parsePaginationParams, paginatedResponse } = require('../utils/pagination');
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -9,6 +10,7 @@ const prisma = new PrismaClient();
 router.get('/', authenticate, async (req, res) => {
   try {
     const { category, jobId, surveyId, condition } = req.query;
+    const { page, limit, skip, sortBy, sortOrder } = parsePaginationParams(req.query);
 
     const where = {};
     if (category) where.category = category;
@@ -16,20 +18,25 @@ router.get('/', authenticate, async (req, res) => {
     if (surveyId) where.surveyId = surveyId;
     if (condition) where.condition = condition;
 
-    const items = await prisma.inventoryItem.findMany({
-      where,
-      include: {
-        survey: {
-          select: { id: true, leadId: true },
+    const [items, total] = await Promise.all([
+      prisma.inventoryItem.findMany({
+        where,
+        include: {
+          survey: {
+            select: { id: true, leadId: true },
+          },
+          job: {
+            select: { id: true, jobNumber: true },
+          },
         },
-        job: {
-          select: { id: true, jobNumber: true },
-        },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
+        orderBy: { [sortBy]: sortOrder },
+        skip,
+        take: limit,
+      }),
+      prisma.inventoryItem.count({ where }),
+    ]);
 
-    res.json(items);
+    res.json(paginatedResponse(items, total, page, limit));
   } catch (error) {
     console.error('Get inventory error:', error);
     res.status(500).json({ error: 'Failed to get inventory items' });

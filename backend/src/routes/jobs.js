@@ -1,6 +1,7 @@
 const express = require('express');
 const { PrismaClient } = require('@prisma/client');
 const { authenticate } = require('../middleware/auth');
+const { parsePaginationParams, paginatedResponse } = require('../utils/pagination');
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -9,6 +10,7 @@ const prisma = new PrismaClient();
 router.get('/', authenticate, async (req, res) => {
   try {
     const { status, assignedTo, startDate, endDate, search } = req.query;
+    const { page, limit, skip, sortBy, sortOrder } = parsePaginationParams(req.query);
 
     const where = {};
     if (status) where.status = status;
@@ -26,40 +28,75 @@ router.get('/', authenticate, async (req, res) => {
       ];
     }
 
-    const jobs = await prisma.job.findMany({
-      where,
-      include: {
-        lead: {
-          select: { firstName: true, lastName: true, phone: true, email: true },
-        },
-        quote: {
-          select: { total: true, type: true },
-        },
-        assignedTo: {
-          select: { id: true, firstName: true, lastName: true },
-        },
-        crewAssignments: {
-          include: {
-            crewMember: {
-              select: { id: true, firstName: true, lastName: true, role: true },
+    const [jobs, total] = await Promise.all([
+      prisma.job.findMany({
+        where,
+        include: {
+          lead: {
+            select: { firstName: true, lastName: true, phone: true, email: true },
+          },
+          quote: {
+            select: { total: true, type: true },
+          },
+          assignedTo: {
+            select: { id: true, firstName: true, lastName: true },
+          },
+          crewAssignments: {
+            include: {
+              crewMember: {
+                select: { id: true, firstName: true, lastName: true, role: true },
+              },
+            },
+          },
+          truckAssignments: {
+            include: {
+              truck: {
+                select: { id: true, name: true, licensePlate: true },
+              },
             },
           },
         },
-        truckAssignments: {
-          include: {
-            truck: {
-              select: { id: true, name: true, licensePlate: true },
-            },
-          },
-        },
-      },
-      orderBy: { moveDate: 'asc' },
-    });
+        orderBy: { [sortBy]: sortOrder },
+        skip,
+        take: limit,
+      }),
+      prisma.job.count({ where }),
+    ]);
 
-    res.json(jobs);
+    res.json(paginatedResponse(jobs, total, page, limit));
   } catch (error) {
     console.error('Get jobs error:', error);
     res.status(500).json({ error: 'Failed to get jobs' });
+  }
+});
+
+// Bulk delete
+router.post('/bulk-delete', authenticate, async (req, res) => {
+  try {
+    const { ids } = req.body;
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ error: 'ids array is required' });
+    }
+    const result = await prisma.job.deleteMany({ where: { id: { in: ids } } });
+    res.json({ message: `${result.count} items deleted`, count: result.count });
+  } catch (error) {
+    console.error('Bulk delete error:', error);
+    res.status(500).json({ error: 'Bulk delete failed' });
+  }
+});
+
+// Bulk update
+router.put('/bulk-update', authenticate, async (req, res) => {
+  try {
+    const { ids, data } = req.body;
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ error: 'ids array is required' });
+    }
+    const result = await prisma.job.updateMany({ where: { id: { in: ids } }, data });
+    res.json({ message: `${result.count} items updated`, count: result.count });
+  } catch (error) {
+    console.error('Bulk update error:', error);
+    res.status(500).json({ error: 'Bulk update failed' });
   }
 });
 

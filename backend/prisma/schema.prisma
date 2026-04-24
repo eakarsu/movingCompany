@@ -9,16 +9,21 @@ datasource db {
 
 // User and Authentication
 model User {
-  id            String   @id @default(uuid())
-  email         String   @unique
-  password      String
-  firstName     String
-  lastName      String
-  phone         String?
-  role          UserRole @default(STAFF)
-  isActive      Boolean  @default(true)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id                    String   @id @default(uuid())
+  email                 String   @unique
+  password              String
+  firstName             String
+  lastName              String
+  phone                 String?
+  role                  UserRole @default(STAFF)
+  isActive              Boolean  @default(true)
+  emailVerified         Boolean  @default(false)
+  emailVerifyToken      String?
+  emailVerifyExpires    DateTime?
+  passwordResetToken    String?
+  passwordResetExpires  DateTime?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
 
   leads         Lead[]
   jobs          Job[]        @relation("AssignedJobs")
@@ -26,6 +31,9 @@ model User {
   crewAssignments CrewAssignment[]
   communications Communication[]
   createdQuotes Quote[]
+
+  @@index([passwordResetToken])
+  @@index([emailVerifyToken])
 }
 
 enum UserRole {

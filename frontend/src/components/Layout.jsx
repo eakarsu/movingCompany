@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
@@ -20,15 +20,37 @@ const menuItems = [
 export default function Layout({ children }) {
   const { user, logout } = useAuth();
   const location = useLocation();
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // Close sidebar on route change (mobile)
+  useEffect(() => {
+    setSidebarOpen(false);
+  }, [location.pathname]);
+
+  // Close sidebar on escape key
+  useEffect(() => {
+    const handleEsc = (e) => {
+      if (e.key === 'Escape') setSidebarOpen(false);
+    };
+    window.addEventListener('keydown', handleEsc);
+    return () => window.removeEventListener('keydown', handleEsc);
+  }, []);
 
   return (
     <div className="min-h-screen bg-gray-100">
+      {/* Mobile overlay */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
       {/* Sidebar */}
       <aside
         className={`fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform transition-transform duration-300 ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-        }`}
+        } lg:translate-x-0`}
       >
         <div className="flex items-center justify-between h-16 px-4 border-b">
           <Link to="/" className="text-xl font-bold text-blue-600">
@@ -51,23 +73,23 @@ export default function Layout({ children }) {
               to={item.path}
               className={`sidebar-link ${location.pathname === item.path ? 'active' : ''}`}
             >
-              <svg className="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-5 h-5 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={item.icon} />
               </svg>
-              {item.label}
+              <span className="truncate">{item.label}</span>
             </Link>
           ))}
         </nav>
 
         <div className="absolute bottom-0 left-0 right-0 p-4 border-t bg-white">
           <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-900">{user?.firstName} {user?.lastName}</p>
+            <div className="min-w-0">
+              <p className="text-sm font-medium text-gray-900 truncate">{user?.firstName} {user?.lastName}</p>
               <p className="text-xs text-gray-500">{user?.role}</p>
             </div>
             <button
               onClick={logout}
-              className="p-2 text-gray-500 hover:text-red-600 rounded-lg hover:bg-gray-100"
+              className="p-2 text-gray-500 hover:text-red-600 rounded-lg hover:bg-gray-100 flex-shrink-0"
               title="Logout"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -79,24 +101,24 @@ export default function Layout({ children }) {
       </aside>
 
       {/* Main content */}
-      <div className={`transition-all duration-300 ${sidebarOpen ? 'lg:ml-64' : ''}`}>
+      <div className="lg:ml-64 transition-all duration-300">
         {/* Top bar */}
-        <header className="sticky top-0 z-40 flex items-center h-16 px-4 bg-white shadow">
+        <header className="sticky top-0 z-30 flex items-center h-16 px-4 bg-white shadow">
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="p-2 rounded-md hover:bg-gray-100"
+            className="p-2 rounded-md hover:bg-gray-100 lg:hidden"
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
             </svg>
           </button>
-          <h1 className="ml-4 text-lg font-semibold text-gray-800">
+          <h1 className="ml-2 lg:ml-0 text-lg font-semibold text-gray-800 truncate">
             {menuItems.find((item) => item.path === location.pathname)?.label || 'Moving Company Platform'}
           </h1>
         </header>
 
         {/* Page content */}
-        <main className="p-6">{children}</main>
+        <main className="p-3 sm:p-4 md:p-6">{children}</main>
       </div>
     </div>
   );

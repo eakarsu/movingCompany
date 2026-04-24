@@ -1,49 +1,132 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { getQuotes, getEnums, getLeads, createQuote, getRates } from '../api';
+import { getQuotes, getEnums, getLeads, createQuote, getRates, bulkDeleteQuotes, bulkUpdateQuotes } from '../api';
 import { format } from 'date-fns';
+import { showToast } from '../components/Toast';
+import { useConfirm } from '../components/ConfirmDialog';
+import Pagination from '../components/Pagination';
+import SortHeader from '../components/SortHeader';
+import BulkActions, { SelectCheckbox } from '../components/BulkActions';
+import { TableSkeleton } from '../components/Skeleton';
+import { exportToCSV, exportToPDF } from '../utils/export';
+import { validateForm, validators } from '../utils/validation';
+
+const exportColumns = [
+  { key: 'quoteNumber', label: 'Quote Number' },
+  { label: 'Client Name', accessor: (row) => `${row.lead?.firstName || ''} ${row.lead?.lastName || ''}`.trim() },
+  { label: 'Move Type', accessor: (row) => row.type?.replace(/_/g, ' ') || '' },
+  { label: 'Total', accessor: (row) => row.total != null ? `$${row.total.toLocaleString()}` : '' },
+  { key: 'status', label: 'Status' },
+  { label: 'Created Date', accessor: (row) => format(new Date(row.createdAt), 'MMM d, yyyy') },
+];
+
+const bulkUpdateOptions = [
+  { label: 'Set Status: Draft', value: 'status:DRAFT' },
+  { label: 'Set Status: Sent', value: 'status:SENT' },
+  { label: 'Set Status: Accepted', value: 'status:ACCEPTED' },
+  { label: 'Set Status: Rejected', value: 'status:REJECTED' },
+];
 
 export default function Quotes() {
   const [quotes, setQuotes] = useState([]);
+  const [pagination, setPagination] = useState(null);
   const [leads, setLeads] = useState([]);
   const [enums, setEnums] = useState(null);
   const [rates, setRates] = useState(null);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState({ status: '' });
+  const [sortBy, setSortBy] = useState('createdAt');
+  const [sortOrder, setSortOrder] = useState('desc');
+  const [page, setPage] = useState(1);
+  const [selectedIds, setSelectedIds] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const navigate = useNavigate();
+  const confirm = useConfirm();
 
-  useEffect(() => {
-    loadData();
-  }, [filter]);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
+      setLoading(true);
       const [quotesRes, enumsRes, leadsRes, ratesRes] = await Promise.all([
-        getQuotes(filter),
+        getQuotes({ ...filter, page, sortBy, sortOrder }),
         getEnums(),
         getLeads({ status: 'QUALIFIED' }),
         getRates(),
       ]);
-      setQuotes(quotesRes.data);
+      const data = quotesRes.data;
+      setQuotes(data.data || data.quotes || data);
+      setPagination(data.pagination || null);
       setEnums(enumsRes.data);
-      setLeads(leadsRes.data.leads || []);
+      setLeads(leadsRes.data.data || leadsRes.data.leads || []);
       setRates(ratesRes.data);
+      setSelectedIds([]);
     } catch (error) {
-      console.error('Error loading quotes:', error);
+      showToast.error('Failed to load quotes');
     } finally {
       setLoading(false);
     }
-  };
+  }, [filter, page, sortBy, sortOrder]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   const handleCreateQuote = async (data) => {
     try {
       const response = await createQuote(data);
+      showToast.success('Quote created successfully');
       setShowModal(false);
       navigate(`/quotes/${response.data.id}`);
     } catch (error) {
-      console.error('Error creating quote:', error);
+      showToast.error('Failed to create quote');
     }
+  };
+
+  const handleSort = (field, order) => {
+    setSortBy(field);
+    setSortOrder(order);
+    setPage(1);
+  };
+
+  const handleBulkDelete = async () => {
+    const confirmed = await confirm({
+      title: 'Delete Selected Quotes',
+      message: `Are you sure you want to delete ${selectedIds.length} quote(s)? This action cannot be undone.`,
+      confirmLabel: 'Delete',
+      variant: 'danger',
+    });
+    if (confirmed) {
+      try {
+        await bulkDeleteQuotes(selectedIds);
+        showToast.success(`${selectedIds.length} quote(s) deleted`);
+        loadData();
+      } catch (error) {
+        showToast.error('Failed to delete quotes');
+      }
+    }
+  };
+
+  const handleBulkUpdate = async (data) => {
+    try {
+      await bulkUpdateQuotes(selectedIds, data);
+      showToast.success(`${selectedIds.length} quote(s) updated`);
+      loadData();
+    } catch (error) {
+      showToast.error('Failed to update quotes');
+    }
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.length === quotes.length) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(quotes.map((q) => q.id));
+    }
+  };
+
+  const toggleSelect = (id) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
+    );
   };
 
   const getStatusColor = (status) => {
@@ -58,63 +141,98 @@ export default function Quotes() {
     return colors[status] || 'badge-gray';
   };
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
-    );
+  if (loading && !quotes.length) {
+    return <TableSkeleton rows={8} cols={7} />;
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <select
-          value={filter.status}
-          onChange={(e) => setFilter({ ...filter, status: e.target.value })}
-          className="select w-40"
-        >
-          <option value="">All Statuses</option>
-          {enums?.quoteStatuses?.map((status) => (
-            <option key={status} value={status}>{status}</option>
-          ))}
-        </select>
-        <button onClick={() => setShowModal(true)} className="btn-primary">
-          + New Quote
-        </button>
+    <div className="space-y-4 sm:space-y-6">
+      {/* Filters and Actions */}
+      <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 sm:items-center sm:justify-between">
+        <div className="flex flex-wrap gap-2 sm:gap-4">
+          <select
+            value={filter.status}
+            onChange={(e) => { setFilter({ ...filter, status: e.target.value }); setPage(1); }}
+            className="select w-full sm:w-40"
+          >
+            <option value="">All Statuses</option>
+            {enums?.quoteStatuses?.map((status) => (
+              <option key={status} value={status}>{status.replace(/_/g, ' ')}</option>
+            ))}
+          </select>
+        </div>
+        <div className="flex gap-2">
+          <button onClick={() => exportToCSV(quotes, exportColumns, 'quotes')} className="btn-secondary text-sm">
+            CSV
+          </button>
+          <button onClick={() => exportToPDF(quotes, exportColumns, 'quotes', 'Quotes Report')} className="btn-secondary text-sm">
+            PDF
+          </button>
+          <button onClick={() => setShowModal(true)} className="btn-primary text-sm">
+            + New Quote
+          </button>
+        </div>
       </div>
 
-      <div className="card overflow-hidden">
+      {/* Bulk Actions */}
+      <BulkActions
+        selectedCount={selectedIds.length}
+        onDelete={handleBulkDelete}
+        onUpdate={handleBulkUpdate}
+        updateOptions={bulkUpdateOptions}
+      />
+
+      {/* Quotes Table */}
+      <div className="card overflow-x-auto">
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
-              <th className="px-6 py-3 table-header">Quote #</th>
-              <th className="px-6 py-3 table-header">Customer</th>
-              <th className="px-6 py-3 table-header">Type</th>
-              <th className="px-6 py-3 table-header">Total</th>
-              <th className="px-6 py-3 table-header">Status</th>
-              <th className="px-6 py-3 table-header">Created</th>
-              <th className="px-6 py-3 table-header">Actions</th>
+              <th className="px-4 py-3">
+                <SelectCheckbox
+                  checked={selectedIds.length === quotes.length && quotes.length > 0}
+                  indeterminate={selectedIds.length > 0 && selectedIds.length < quotes.length}
+                  onChange={toggleSelectAll}
+                />
+              </th>
+              <th className="px-4 py-3"><SortHeader label="Quote #" field="quoteNumber" currentSort={sortBy} currentOrder={sortOrder} onSort={handleSort} /></th>
+              <th className="px-4 py-3"><SortHeader label="Customer" field="lead.firstName" currentSort={sortBy} currentOrder={sortOrder} onSort={handleSort} /></th>
+              <th className="px-4 py-3 table-header hidden md:table-cell">Type</th>
+              <th className="px-4 py-3 hidden sm:table-cell"><SortHeader label="Total" field="total" currentSort={sortBy} currentOrder={sortOrder} onSort={handleSort} /></th>
+              <th className="px-4 py-3"><SortHeader label="Status" field="status" currentSort={sortBy} currentOrder={sortOrder} onSort={handleSort} /></th>
+              <th className="px-4 py-3 hidden lg:table-cell"><SortHeader label="Created" field="createdAt" currentSort={sortBy} currentOrder={sortOrder} onSort={handleSort} /></th>
+              <th className="px-4 py-3 table-header">Actions</th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {quotes.map((quote) => (
               <tr key={quote.id} className="hover:bg-gray-50">
-                <td className="px-6 py-4 font-medium">{quote.quoteNumber}</td>
-                <td className="px-6 py-4">
-                  <p>{quote.lead?.firstName} {quote.lead?.lastName}</p>
-                  <p className="text-sm text-gray-500">{quote.lead?.email}</p>
+                <td className="px-4 py-3">
+                  <SelectCheckbox
+                    checked={selectedIds.includes(quote.id)}
+                    onChange={() => toggleSelect(quote.id)}
+                  />
                 </td>
-                <td className="px-6 py-4">{quote.type?.replace(/_/g, ' ')}</td>
-                <td className="px-6 py-4 font-bold">${quote.total?.toLocaleString()}</td>
-                <td className="px-6 py-4">
-                  <span className={`badge ${getStatusColor(quote.status)}`}>{quote.status}</span>
+                <td className="px-4 py-3 font-medium text-sm">{quote.quoteNumber}</td>
+                <td className="px-4 py-3">
+                  <div>
+                    <p className="font-medium text-sm">{quote.lead?.firstName} {quote.lead?.lastName}</p>
+                    <p className="text-xs text-gray-500">{quote.lead?.email}</p>
+                  </div>
                 </td>
-                <td className="px-6 py-4 text-sm text-gray-500">
+                <td className="px-4 py-3 hidden md:table-cell">
+                  <span className="text-sm">{quote.type?.replace(/_/g, ' ')}</span>
+                </td>
+                <td className="px-4 py-3 hidden sm:table-cell">
+                  <span className="font-bold text-sm">${quote.total?.toLocaleString()}</span>
+                </td>
+                <td className="px-4 py-3">
+                  <span className={`badge ${getStatusColor(quote.status)} text-xs`}>{quote.status}</span>
+                </td>
+                <td className="px-4 py-3 text-sm text-gray-500 hidden lg:table-cell">
                   {format(new Date(quote.createdAt), 'MMM d, yyyy')}
                 </td>
-                <td className="px-6 py-4">
-                  <Link to={`/quotes/${quote.id}`} className="text-blue-600 hover:text-blue-800">
+                <td className="px-4 py-3">
+                  <Link to={`/quotes/${quote.id}`} className="text-blue-600 hover:text-blue-800 text-sm">
                     View
                   </Link>
                 </td>
@@ -122,11 +240,15 @@ export default function Quotes() {
             ))}
           </tbody>
         </table>
-        {quotes.length === 0 && (
+        {quotes.length === 0 && !loading && (
           <p className="text-center py-8 text-gray-500">No quotes found</p>
         )}
       </div>
 
+      {/* Pagination */}
+      <Pagination pagination={pagination} onPageChange={setPage} />
+
+      {/* Create Quote Modal */}
       {showModal && (
         <QuoteModal
           leads={leads}
@@ -142,6 +264,7 @@ export default function Quotes() {
 
 function QuoteModal({ leads, enums, rates, onClose, onSubmit }) {
   const [selectedLead, setSelectedLead] = useState(null);
+  const [errors, setErrors] = useState({});
   const [formData, setFormData] = useState({
     leadId: '',
     type: 'NON_BINDING',
@@ -169,27 +292,42 @@ function QuoteModal({ leads, enums, rates, onClose, onSubmit }) {
       estimatedHours: lead?.estimatedVolume ? Math.ceil(lead.estimatedVolume / 150) : 4,
       crewSize: lead?.estimatedVolume > 500 ? 3 : 2,
     });
+    if (errors.leadId) {
+      setErrors((prev) => ({ ...prev, leadId: undefined }));
+    }
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    const { isValid, errors: validationErrors } = validateForm(formData, {
+      leadId: [validators.required],
+      estimatedHours: [validators.required],
+      crewSize: [validators.required],
+      laborRate: [validators.required],
+      validDays: [validators.required],
+    });
+    if (!isValid) {
+      setErrors(validationErrors);
+      showToast.error('Please fix the form errors');
+      return;
+    }
+    setErrors({});
     onSubmit(formData);
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100]">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[100] p-4">
       <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-        <div className="p-6 border-b">
+        <div className="p-4 sm:p-6 border-b">
           <h2 className="text-xl font-semibold">New Quote</h2>
         </div>
-        <form onSubmit={handleSubmit} className="p-6 space-y-4">
+        <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4">
           <div>
             <label className="block text-sm font-medium mb-1">Select Lead *</label>
             <select
               value={formData.leadId}
               onChange={(e) => handleLeadSelect(e.target.value)}
-              className="select"
-              required
+              className={`select ${errors.leadId ? 'border-red-500' : ''}`}
             >
               <option value="">Select a lead...</option>
               {leads.map((lead) => (
@@ -198,6 +336,7 @@ function QuoteModal({ leads, enums, rates, onClose, onSubmit }) {
                 </option>
               ))}
             </select>
+            {errors.leadId && <p className="text-red-500 text-xs mt-1">{errors.leadId}</p>}
             {leads.length === 0 && (
               <p className="text-sm text-yellow-600 mt-1">No qualified leads available. Qualify a lead first.</p>
             )}
@@ -213,7 +352,7 @@ function QuoteModal({ leads, enums, rates, onClose, onSubmit }) {
                 )}
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium mb-1">Quote Type</label>
                   <select
@@ -227,48 +366,52 @@ function QuoteModal({ leads, enums, rates, onClose, onSubmit }) {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1">Valid Days</label>
+                  <label className="block text-sm font-medium mb-1">Valid Days *</label>
                   <input
                     type="number"
                     value={formData.validDays}
                     onChange={(e) => setFormData({ ...formData, validDays: parseInt(e.target.value) })}
-                    className="input"
+                    className={`input ${errors.validDays ? 'border-red-500' : ''}`}
                   />
+                  {errors.validDays && <p className="text-red-500 text-xs mt-1">{errors.validDays}</p>}
                 </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-sm font-medium mb-1">Est. Hours</label>
+                  <label className="block text-sm font-medium mb-1">Est. Hours *</label>
                   <input
                     type="number"
                     value={formData.estimatedHours}
                     onChange={(e) => setFormData({ ...formData, estimatedHours: parseFloat(e.target.value) })}
-                    className="input"
+                    className={`input ${errors.estimatedHours ? 'border-red-500' : ''}`}
                     step="0.5"
                   />
+                  {errors.estimatedHours && <p className="text-red-500 text-xs mt-1">{errors.estimatedHours}</p>}
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1">Crew Size</label>
+                  <label className="block text-sm font-medium mb-1">Crew Size *</label>
                   <input
                     type="number"
                     value={formData.crewSize}
                     onChange={(e) => setFormData({ ...formData, crewSize: parseInt(e.target.value) })}
-                    className="input"
+                    className={`input ${errors.crewSize ? 'border-red-500' : ''}`}
                   />
+                  {errors.crewSize && <p className="text-red-500 text-xs mt-1">{errors.crewSize}</p>}
                 </div>
                 <div>
-                  <label className="block text-sm font-medium mb-1">Labor Rate ($/hr)</label>
+                  <label className="block text-sm font-medium mb-1">Labor Rate ($/hr) *</label>
                   <input
                     type="number"
                     value={formData.laborRate}
                     onChange={(e) => setFormData({ ...formData, laborRate: parseFloat(e.target.value) })}
-                    className="input"
+                    className={`input ${errors.laborRate ? 'border-red-500' : ''}`}
                   />
+                  {errors.laborRate && <p className="text-red-500 text-xs mt-1">{errors.laborRate}</p>}
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium mb-1">Travel Hours</label>
                   <input

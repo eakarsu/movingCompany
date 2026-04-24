@@ -1,6 +1,7 @@
 const express = require('express');
 const { PrismaClient } = require('@prisma/client');
 const { authenticate } = require('../middleware/auth');
+const { parsePaginationParams, paginatedResponse } = require('../utils/pagination');
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -9,6 +10,7 @@ const prisma = new PrismaClient();
 router.get('/', authenticate, async (req, res) => {
   try {
     const { type, direction, leadId, jobId } = req.query;
+    const { page, limit, skip, sortBy, sortOrder } = parsePaginationParams(req.query);
 
     const where = {};
     if (type) where.type = type;
@@ -16,26 +18,31 @@ router.get('/', authenticate, async (req, res) => {
     if (leadId) where.leadId = leadId;
     if (jobId) where.jobId = jobId;
 
-    const communications = await prisma.communication.findMany({
-      where,
-      include: {
-        lead: {
-          select: { id: true, firstName: true, lastName: true },
+    const [communications, total] = await Promise.all([
+      prisma.communication.findMany({
+        where,
+        include: {
+          lead: {
+            select: { id: true, firstName: true, lastName: true },
+          },
+          job: {
+            select: { id: true, jobNumber: true },
+          },
+          user: {
+            select: { id: true, firstName: true, lastName: true },
+          },
+          template: {
+            select: { id: true, name: true },
+          },
         },
-        job: {
-          select: { id: true, jobNumber: true },
-        },
-        user: {
-          select: { id: true, firstName: true, lastName: true },
-        },
-        template: {
-          select: { id: true, name: true },
-        },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
+        orderBy: { [sortBy]: sortOrder },
+        skip,
+        take: limit,
+      }),
+      prisma.communication.count({ where }),
+    ]);
 
-    res.json(communications);
+    res.json(paginatedResponse(communications, total, page, limit));
   } catch (error) {
     console.error('Get communications error:', error);
     res.status(500).json({ error: 'Failed to get communications' });
