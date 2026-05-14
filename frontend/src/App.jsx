@@ -20,6 +20,7 @@ import Invoices from './pages/Invoices';
 import Claims from './pages/Claims';
 import Settings from './pages/Settings';
 import AITools from './pages/AITools';
+import AIAdvanced from './pages/AIAdvanced';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 
@@ -70,6 +71,7 @@ function App() {
                           <Route path="/claims" element={<Claims />} />
                           <Route path="/settings" element={<Settings />} />
                           <Route path="/ai-tools" element={<AITools />} />
+                          <Route path="/ai-advanced" element={<AIAdvanced />} />
                         </Routes>
                       </ErrorBoundary>
                     </Layout>

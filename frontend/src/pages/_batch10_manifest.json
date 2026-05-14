@@ -1,0 +1,24 @@
+{
+  "marker": "// === Batch 10 Gaps & Frontend Mounts ===",
+  "project": "movingCompany",
+  "items": [
+    "<Route path=\"/batch10/cf-real-time-gps-customer-eta-notifications\" element={<CfRealTimeGpsCustomerEtaNotifications />} />",
+    "<Route path=\"/batch10/cf-vision-based-damage-assessment-claim-photos\" element={<CfVisionBasedDamageAssessmentClaimPhotos />} />",
+    "<Route path=\"/batch10/cf-customer-portal-with-ar-pre-move\" element={<CfCustomerPortalWithArPreMove />} />",
+    "<Route path=\"/batch10/cf-market-rate-pricing-engine-weather-fuel\" element={<CfMarketRatePricingEngineWeatherFuel />} />",
+    "<Route path=\"/batch10/cf-insurance-partner-integrations-auto-issue-coi\" element={<CfInsurancePartnerIntegrationsAutoIssueCoi />} />",
+    "<Route path=\"/batch10/cf-referral-upsell-agent-packing-supplies-cleaning\" element={<CfReferralUpsellAgentPackingSuppliesCleaning />} />",
+    "<Route path=\"/batch10/gap-no-vision-based-damage-assessment-from\" element={<GapNoVisionBasedDamageAssessmentFrom />} />",
+    "<Route path=\"/batch10/gap-no-pre-move-questionnaire-deep-analysis\" element={<GapNoPreMoveQuestionnaireDeepAnalysis />} />",
+    "<Route path=\"/batch10/gap-no-market-rate-pricing-optimizer\" element={<GapNoMarketRatePricingOptimizer />} />",
+    "<Route path=\"/batch10/gap-no-predictive-demand-pre-positioning-of\" element={<GapNoPredictiveDemandPrePositioningOf />} />",
+    "<Route path=\"/batch10/gap-no-customer-sentiment-dashboard-across-surveys\" element={<GapNoCustomerSentimentDashboardAcrossSurveys />} />",
+    "<Route path=\"/batch10/gap-no-real-time-gps-tracking-for\" element={<GapNoRealTimeGpsTrackingFor />} />",
+    "<Route path=\"/batch10/gap-no-customer-portal-move-tracker\" element={<GapNoCustomerPortalMoveTracker />} />",
+    "<Route path=\"/batch10/gap-no-insurance-liability-policy-management\" element={<GapNoInsuranceLiabilityPolicyManagement />} />",
+    "<Route path=\"/batch10/gap-no-payment-processing-module-stripe-ach\" element={<GapNoPaymentProcessingModuleStripeAch />} />",
+    "<Route path=\"/batch10/gap-no-webhooks-for-partners-storage-packing\" element={<GapNoWebhooksForPartnersStoragePacking />} />",
+    "<Route path=\"/batch10/gap-no-multi-vendor-logistics-marketplace\" element={<GapNoMultiVendorLogisticsMarketplace />} />",
+    "<Route path=\"/batch10/gap-no-ar-pre-move-visualization\" element={<GapNoArPreMoveVisualization />} />"
+  ]
+}

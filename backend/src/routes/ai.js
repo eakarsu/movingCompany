@@ -5,6 +5,14 @@ const { authenticate } = require('../middleware/auth');
 const router = express.Router();
 const prisma = new PrismaClient();
 
+function ensureKey(res) {
+  if (!process.env.OPENROUTER_API_KEY) {
+    res.status(503).json({ error: 'AI service not configured (missing OPENROUTER_API_KEY)' });
+    return false;
+  }
+  return true;
+}
+
 // OpenRouter API helper
 async function callOpenRouter(messages, maxTokens = 1000) {
   const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
@@ -593,6 +601,195 @@ Provide response in JSON format ONLY:
   } catch (error) {
     console.error('Inventory identify error:', error);
     res.status(500).json({ error: 'Failed to identify inventory item' });
+  }
+});
+
+// AI Pre-Move Consultation Analyzer - parse pre-move questionnaire to flag concerns and suggest add-ons
+router.post('/pre-move-analyze', authenticate, async (req, res) => {
+  try {
+    const { questionnaire } = req.body;
+    if (!questionnaire) return res.status(400).json({ error: 'questionnaire (object) is required' });
+
+    const prompt = `You are a senior moving consultant. Review the customer pre-move questionnaire and identify concerns, special handling needs, and suggested service add-ons (packing, storage, insurance, hoisting, piano specialist, etc.). Respond in JSON only:
+{
+  "summary": "string",
+  "concerns": ["string"],
+  "specialHandling": ["string"],
+  "recommendedAddOns": [{"name": "string", "reason": "string"}],
+  "estimatedComplexity": "low|medium|high",
+  "followUpQuestions": ["string"]
+}
+
+Questionnaire:
+${JSON.stringify(questionnaire, null, 2)}`;
+
+    const aiResponse = await callOpenRouter([{ role: 'user', content: prompt }], 1200);
+
+    let result;
+    try {
+      result = JSON.parse(aiResponse);
+    } catch (e) {
+      result = { rawAnalysis: aiResponse };
+    }
+    res.json(result);
+  } catch (error) {
+    console.error('Pre-move analyze error:', error);
+    res.status(500).json({ error: 'Failed to analyze pre-move questionnaire' });
+  }
+});
+
+// AI Damage Assessment - structured assessment from a damage description
+router.post('/damage-assess', authenticate, async (req, res) => {
+  try {
+    const { description, itemType, photoDescription } = req.body;
+    if (!description && !photoDescription) {
+      return res.status(400).json({ error: 'description or photoDescription is required' });
+    }
+
+    const prompt = `You are a moving claims adjuster. Assess the reported damage and propose repair/replacement actions and an estimated cost band. Respond in JSON only:
+{
+  "damageType": "string",
+  "severity": "minor|moderate|major|total",
+  "rootCauseHypothesis": "string",
+  "repairOptions": ["string"],
+  "estimatedCost": {"low": <number>, "high": <number>, "currency": "USD"},
+  "recommendedClaimStatus": "approve|investigate|deny",
+  "evidenceGaps": ["string"]
+}
+
+Item Type: ${itemType || 'unspecified'}
+Customer Description: ${description || ''}
+Photo Description: ${photoDescription || 'none'}`;
+
+    const aiResponse = await callOpenRouter([{ role: 'user', content: prompt }], 1200);
+
+    let result;
+    try {
+      result = JSON.parse(aiResponse);
+    } catch (e) {
+      result = { rawAnalysis: aiResponse };
+    }
+    res.json(result);
+  } catch (error) {
+    console.error('Damage assess error:', error);
+    res.status(500).json({ error: 'Failed to assess damage' });
+  }
+});
+
+// AI Market Rate Pricing - propose competitive pricing for a quote
+router.post('/market-rate-pricing', authenticate, async (req, res) => {
+  try {
+    const { origin, destination, distanceMiles, volumeCft, weightLbs, season, services } = req.body;
+    if (!origin || !destination) {
+      return res.status(400).json({ error: 'origin and destination are required' });
+    }
+
+    const prompt = `You are a moving-services pricing analyst. Given the move parameters, propose a competitive market rate band, value-based pricing rationale, and risk factors. Note that you do not have live market data; ground answers in typical industry rules of thumb. Respond in JSON only:
+{
+  "suggestedPriceBand": {"low": <number>, "high": <number>, "currency": "USD"},
+  "pricingDrivers": ["string"],
+  "competitiveNotes": "string",
+  "discountTriggers": ["string"],
+  "upchargeTriggers": ["string"]
+}
+
+Move Details:
+Origin: ${origin}
+Destination: ${destination}
+Distance (miles): ${distanceMiles || 'unknown'}
+Volume (cu ft): ${volumeCft || 'unknown'}
+Weight (lbs): ${weightLbs || 'unknown'}
+Season: ${season || 'unspecified'}
+Services: ${JSON.stringify(services || [])}`;
+
+    const aiResponse = await callOpenRouter([{ role: 'user', content: prompt }], 1200);
+
+    let result;
+    try {
+      result = JSON.parse(aiResponse);
+    } catch (e) {
+      result = { rawAnalysis: aiResponse };
+    }
+    res.json(result);
+  } catch (error) {
+    console.error('Market rate pricing error:', error);
+    res.status(500).json({ error: 'Failed to compute market rate pricing' });
+  }
+});
+
+// AI Predictive Crew Scheduling — Apply pass 4: forward-looking scheduling forecast
+router.post('/predictive-crew-scheduling', authenticate, async (req, res) => {
+  if (!ensureKey(res)) return;
+  try {
+    const { upcomingJobs, crewRoster, horizonDays, constraints } = req.body || {};
+    if (!Array.isArray(upcomingJobs) || upcomingJobs.length === 0) {
+      return res.status(400).json({ error: 'upcomingJobs (non-empty array) is required' });
+    }
+
+    const prompt = `You are a senior operations planner for a moving company. Build a predictive crew schedule for the upcoming horizon, flagging coverage gaps and overtime risks. Respond in JSON only:
+{
+  "horizonDays": <number>,
+  "dailyForecast": [{"date": "YYYY-MM-DD", "jobsCount": <number>, "requiredCrew": <number>, "availableCrew": <number>, "gap": <number>, "overtimeRisk": "low|medium|high", "notes": "string"}],
+  "coverageGaps": [{"date": "YYYY-MM-DD", "shortBy": <number>, "mitigation": "string"}],
+  "hiringSignal": {"recommended": <boolean>, "rationale": "string"},
+  "trainingNeeds": ["string"],
+  "summary": "string"
+}
+
+Upcoming Jobs: ${JSON.stringify(upcomingJobs, null, 2)}
+Crew Roster: ${JSON.stringify(crewRoster || [], null, 2)}
+Horizon (days): ${horizonDays || 14}
+Constraints: ${JSON.stringify(constraints || {}, null, 2)}`;
+
+    const aiResponse = await callOpenRouter([{ role: 'user', content: prompt }], 1500);
+    let result;
+    try {
+      const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
+      result = JSON.parse(jsonMatch ? jsonMatch[0] : aiResponse);
+    } catch (e) {
+      result = { rawAnalysis: aiResponse };
+    }
+    res.json(result);
+  } catch (error) {
+    console.error('Predictive crew scheduling error:', error);
+    res.status(500).json({ error: 'Failed to generate predictive crew schedule' });
+  }
+});
+
+// AI Multi-Vendor Logistics — Apply pass 4: coordinate sub-vendors / partner carriers
+router.post('/multi-vendor-logistics', authenticate, async (req, res) => {
+  if (!ensureKey(res)) return;
+  try {
+    const { jobBrief, vendors, requirements, slaHours } = req.body || {};
+    if (!jobBrief) return res.status(400).json({ error: 'jobBrief is required' });
+
+    const prompt = `You are a logistics coordinator orchestrating sub-vendors (long-haul carriers, specialty crews, packing partners, storage providers). Recommend a vendor mix and risk-managed handoff plan. Respond in JSON only:
+{
+  "recommendedVendorMix": [{"vendorId": "string", "role": "string", "scopeOfWork": "string", "rationale": "string"}],
+  "handoffPlan": [{"step": <number>, "from": "string", "to": "string", "artifacts": ["string"], "checkpoints": ["string"]}],
+  "riskMatrix": [{"risk": "string", "likelihood": "low|medium|high", "impact": "low|medium|high", "mitigation": "string"}],
+  "slaForecast": {"meetsSla": <boolean>, "expectedHours": <number>, "notes": "string"},
+  "openItems": ["string"],
+  "summary": "string"
+}
+
+Job Brief: ${JSON.stringify(jobBrief, null, 2)}
+Available Vendors: ${JSON.stringify(vendors || [], null, 2)}
+Requirements: ${JSON.stringify(requirements || {}, null, 2)}
+SLA Hours: ${slaHours || 'not specified'}`;
+
+    const aiResponse = await callOpenRouter([{ role: 'user', content: prompt }], 1500);
+    let result;
+    try {
+      const jsonMatch = aiResponse.match(/\{[\s\S]*\}/);
+      result = JSON.parse(jsonMatch ? jsonMatch[0] : aiResponse);
+    } catch (e) {
+      result = { rawAnalysis: aiResponse };
+    }
+    res.json(result);
+  } catch (error) {
+    console.error('Multi-vendor logistics error:', error);
+    res.status(500).json({ error: 'Failed to coordinate multi-vendor logistics' });
   }
 });
 
