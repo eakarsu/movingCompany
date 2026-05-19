@@ -15,6 +15,27 @@ const menuItems = [
   { path: '/claims', label: 'Claims', icon: 'M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z' },
   { path: '/ai-tools', label: 'AI Tools', icon: 'M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z' },
   { path: '/settings', label: 'Settings', icon: 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z' },
+  { path: '/custom-views', label: 'Moving Views', icon: 'M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7' },
+
+  // === Batch 10 Gaps & Frontend Mounts === nav
+  { path: '/batch10/cf-real-time-gps-customer-eta-notifications', label: "Real-time GPS + customer ETA notific" },
+  { path: '/batch10/cf-vision-based-damage-assessment-claim-photos', label: "Vision-based damage assessment (clai" },
+  { path: '/batch10/cf-customer-portal-with-ar-pre-move', label: "Customer portal with AR pre-move roo" },
+  { path: '/batch10/cf-market-rate-pricing-engine-weather-fuel', label: "Market-rate pricing engine (weather," },
+  { path: '/batch10/cf-insurance-partner-integrations-auto-issue-coi', label: "Insurance partner integrations + aut" },
+  { path: '/batch10/cf-referral-upsell-agent-packing-supplies-cleaning', label: "Referral / upsell agent (packing sup" },
+  { path: '/batch10/gap-no-vision-based-damage-assessment-from', label: "No vision-based damage assessment fr" },
+  { path: '/batch10/gap-no-pre-move-questionnaire-deep-analysis', label: "No pre-move questionnaire deep-analy" },
+  { path: '/batch10/gap-no-market-rate-pricing-optimizer', label: "No market-rate pricing optimizer" },
+  { path: '/batch10/gap-no-predictive-demand-pre-positioning-of', label: "No predictive demand pre-positioning" },
+  { path: '/batch10/gap-no-customer-sentiment-dashboard-across-surveys', label: "No customer-sentiment dashboard acro" },
+  { path: '/batch10/gap-no-real-time-gps-tracking-for', label: "No real-time GPS tracking for trucks" },
+  { path: '/batch10/gap-no-customer-portal-move-tracker', label: "No customer-portal move tracker" },
+  { path: '/batch10/gap-no-insurance-liability-policy-management', label: "No insurance / liability policy mana" },
+  { path: '/batch10/gap-no-payment-processing-module-stripe-ach', label: "No payment processing module (Stripe" },
+  { path: '/batch10/gap-no-webhooks-for-partners-storage-packing', label: "No webhooks for partners (storage, p" },
+  { path: '/batch10/gap-no-multi-vendor-logistics-marketplace', label: "No multi-vendor logistics marketplac" },
+  { path: '/batch10/gap-no-ar-pre-move-visualization', label: "No AR pre-move visualization" },
 ];
 
 export default function Layout({ children }) {

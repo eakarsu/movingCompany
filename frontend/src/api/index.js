@@ -218,6 +218,11 @@ export const optimizeCrew = (data) => api.post('/ai/crew-optimize', data);
 export const planRoute = (data) => api.post('/ai/route-plan', data);
 export const generateReviewResponse = (data) => api.post('/ai/review-response', data);
 export const generateCommunication = (data) => api.post('/ai/communication-generate', data);
+export const preMoveAnalyze = (data) => api.post('/ai/pre-move-analyze', data);
+export const damageAssess = (data) => api.post('/ai/damage-assess', data);
+export const marketRatePricing = (data) => api.post('/ai/market-rate-pricing', data);
+export const predictiveCrewScheduling = (data) => api.post('/ai/predictive-crew-scheduling', data);
+export const multiVendorLogistics = (data) => api.post('/ai/multi-vendor-logistics', data);
 
 // Dashboard
 export const getDashboardOverview = () => api.get('/dashboard/overview');

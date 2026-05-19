@@ -73,6 +73,8 @@ app.use('/api/claims', claimRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/custom-views', require('./routes/customViews'));
+app.use('/api/gps-eta', require('./routes/gpsEta')); app.use('/api/damage-vision', require('./routes/damageVision')); app.use('/api/customer-portal-ar', require('./routes/customerPortalAR')); app.use('/api/market-rate-pricing', require('./routes/marketRatePricing')); app.use('/api/insurance-partners', require('./routes/insurancePartners')); app.use('/api/referral-upsell', require('./routes/referralUpsell'));
 
 // Health check
 app.get('/api/health', (req, res) => {
@@ -90,3 +92,17 @@ app.listen(PORT, () => {
 });
 
 module.exports = app;
+
+// === Batch 10 Gaps & Frontend Mounts === (mounts)
+app.use('/api/gap-no-vision-based-damage-assessment-from', require('./routes/gap_no_vision_based_damage_assessment_from'));
+app.use('/api/gap-no-pre-move-questionnaire-deep-analysis', require('./routes/gap_no_pre_move_questionnaire_deep_analysis'));
+app.use('/api/gap-no-market-rate-pricing-optimizer', require('./routes/gap_no_market_rate_pricing_optimizer'));
+app.use('/api/gap-no-predictive-demand-pre-positioning-of', require('./routes/gap_no_predictive_demand_pre_positioning_of'));
+app.use('/api/gap-no-customer-sentiment-dashboard-across-surveys', require('./routes/gap_no_customer_sentiment_dashboard_across_surveys'));
+app.use('/api/gap-no-real-time-gps-tracking-for', require('./routes/gap_no_real_time_gps_tracking_for'));
+app.use('/api/gap-no-customer-portal-move-tracker', require('./routes/gap_no_customer_portal_move_tracker'));
+app.use('/api/gap-no-insurance-liability-policy-management', require('./routes/gap_no_insurance_liability_policy_management'));
+app.use('/api/gap-no-payment-processing-module-stripe-ach', require('./routes/gap_no_payment_processing_module_stripe_ach'));
+app.use('/api/gap-no-webhooks-for-partners-storage-packing', require('./routes/gap_no_webhooks_for_partners_storage_packing'));
+app.use('/api/gap-no-multi-vendor-logistics-marketplace', require('./routes/gap_no_multi_vendor_logistics_marketplace'));
+app.use('/api/gap-no-ar-pre-move-visualization', require('./routes/gap_no_ar_pre_move_visualization'));
