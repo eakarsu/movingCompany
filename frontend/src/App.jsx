@@ -23,6 +23,7 @@ import AITools from './pages/AITools';
 import AIAdvanced from './pages/AIAdvanced';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
+import CustomViewsPage from './pages/CustomViewsPage';
 
 function PrivateRoute({ children }) {
   const { user, loading } = useAuth();
@@ -72,6 +73,7 @@ function App() {
                           <Route path="/settings" element={<Settings />} />
                           <Route path="/ai-tools" element={<AITools />} />
                           <Route path="/ai-advanced" element={<AIAdvanced />} />
+                          <Route path="/custom-views" element={<CustomViewsPage />} />
                         </Routes>
                       </ErrorBoundary>
                     </Layout>
