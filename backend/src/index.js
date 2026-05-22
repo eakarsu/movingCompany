@@ -74,6 +74,7 @@ app.use('/api/settings', settingsRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/custom-views', require('./routes/customViews'));
+app.use('/api/elevator-reservation-window', require('./routes/elevatorReservationWindow'));
 app.use('/api/gps-eta', require('./routes/gpsEta')); app.use('/api/damage-vision', require('./routes/damageVision')); app.use('/api/customer-portal-ar', require('./routes/customerPortalAR')); app.use('/api/market-rate-pricing', require('./routes/marketRatePricing')); app.use('/api/insurance-partners', require('./routes/insurancePartners')); app.use('/api/referral-upsell', require('./routes/referralUpsell'));
 
 // Health check

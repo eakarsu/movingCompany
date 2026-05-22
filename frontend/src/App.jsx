@@ -24,6 +24,10 @@ import AIAdvanced from './pages/AIAdvanced';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 import CustomViewsPage from './pages/CustomViewsPage';
+import ElevatorReservationWindow from './pages/ElevatorReservationWindow';
+
+import CodexCustomVizFeature from './pages/CodexCustomVizFeature';
+import CodexOperationsFeature from './pages/CodexOperationsFeature';
 
 function PrivateRoute({ children }) {
   const { user, loading } = useAuth();
@@ -47,6 +51,9 @@ function App() {
           <BrowserRouter>
             <ToastProvider />
             <Routes>
+        <Route path="/codex/custom-viz" element={<CodexCustomVizFeature />} />
+        <Route path="/codex/operations" element={<CodexOperationsFeature />} />
+
               <Route path="/login" element={<Login />} />
               <Route path="/forgot-password" element={<ForgotPassword />} />
               <Route path="/reset-password" element={<ResetPassword />} />
@@ -74,6 +81,7 @@ function App() {
                           <Route path="/ai-tools" element={<AITools />} />
                           <Route path="/ai-advanced" element={<AIAdvanced />} />
                           <Route path="/custom-views" element={<CustomViewsPage />} />
+                          <Route path="/elevator-reservation-window" element={<ElevatorReservationWindow />} />
                         </Routes>
                       </ErrorBoundary>
                     </Layout>
