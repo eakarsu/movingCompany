@@ -1,0 +1,67 @@
+services:
+  db:
+    image: postgres:16-bookworm
+    environment:
+      POSTGRES_DB: moving_company
+      POSTGRES_USER: moving_company
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U moving_company -d moving_company"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+    volumes:
+      - moving_company_db:/var/lib/postgresql/data
+
+  migrate:
+    build:
+      context: .
+      target: migration
+    environment:
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+
+  app:
+    build:
+      context: .
+      target: runtime
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: 3001
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:?CORS_ALLOWED_ORIGINS is required}
+      TRUST_PROXY_HOPS: ${TRUST_PROXY_HOPS:-1}
+      DOCUMENT_CONNECTOR_ALLOWED_HOSTS: ${DOCUMENT_CONNECTOR_ALLOWED_HOSTS:?DOCUMENT_CONNECTOR_ALLOWED_HOSTS is required}
+      CONNECTOR_TIMEOUT_MS: ${CONNECTOR_TIMEOUT_MS:-10000}
+      DOCUMENT_STORAGE_URL: ${DOCUMENT_STORAGE_URL:?DOCUMENT_STORAGE_URL is required}
+      DOCUMENT_STORAGE_TOKEN: ${DOCUMENT_STORAGE_TOKEN:-}
+      OCR_PROVIDER_URL: ${OCR_PROVIDER_URL:?OCR_PROVIDER_URL is required}
+      OCR_PROVIDER_TOKEN: ${OCR_PROVIDER_TOKEN:-}
+      ESIGN_PROVIDER_URL: ${ESIGN_PROVIDER_URL:?ESIGN_PROVIDER_URL is required}
+      ESIGN_PROVIDER_TOKEN: ${ESIGN_PROVIDER_TOKEN:-}
+      ESIGN_WEBHOOK_SECRET: ${ESIGN_WEBHOOK_SECRET:?ESIGN_WEBHOOK_SECRET is required}
+      FILING_PROVIDER_URL: ${FILING_PROVIDER_URL:?FILING_PROVIDER_URL is required}
+      FILING_PROVIDER_TOKEN: ${FILING_PROVIDER_TOKEN:-}
+      FILING_WEBHOOK_SECRET: ${FILING_WEBHOOK_SECRET:?FILING_WEBHOOK_SECRET is required}
+      TEMPLATE_REGISTRY_URL: ${TEMPLATE_REGISTRY_URL:?TEMPLATE_REGISTRY_URL is required}
+      TEMPLATE_REGISTRY_TOKEN: ${TEMPLATE_REGISTRY_TOKEN:-}
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    ports:
+      - "${APP_BIND_ADDRESS:-127.0.0.1}:${APP_PORT:-3001}:3001"
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=64m
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+
+volumes:
+  moving_company_db:

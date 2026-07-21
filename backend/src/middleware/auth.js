@@ -1,57 +1,52 @@
 const jwt = require('jsonwebtoken');
-const { PrismaClient } = require('@prisma/client');
+const prisma = require('../lib/prisma');
+const { requireSecret } = require('../config');
 
-const prisma = new PrismaClient();
-
-// In-memory token blacklist (use Redis in production)
-const tokenBlacklist = new Set();
+const TOKEN_ISSUER = 'moving-company-legal-documents';
+const TOKEN_AUDIENCE = 'moving-company-operators';
 
 const authenticate = async (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({ error: 'Authentication required' });
+      return res.status(401).json({ error: 'Authentication required', code: 'AUTHENTICATION_REQUIRED' });
     }
-
-    const token = authHeader.split(' ')[1];
-
-    // Check if token is blacklisted
-    if (tokenBlacklist.has(token)) {
-      return res.status(401).json({ error: 'Token has been revoked' });
-    }
-
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
-    const user = await prisma.user.findUnique({
-      where: { id: decoded.userId },
+    const token = authHeader.slice('Bearer '.length).trim();
+    if (!token) return res.status(401).json({ error: 'Authentication required', code: 'AUTHENTICATION_REQUIRED' });
+    const decoded = jwt.verify(token, requireSecret('JWT_SECRET'), {
+      algorithms: ['HS256'],
+      issuer: TOKEN_ISSUER,
+      audience: TOKEN_AUDIENCE,
     });
-
-    if (!user || !user.isActive) {
-      return res.status(401).json({ error: 'User not found or inactive' });
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.sub },
+      select: {
+        id: true,
+        email: true,
+        firstName: true,
+        lastName: true,
+        phone: true,
+        role: true,
+        isActive: true,
+        emailVerified: true,
+        authVersion: true,
+      },
+    });
+    if (!user || !user.isActive || decoded.authVersion !== user.authVersion) {
+      return res.status(401).json({ error: 'Session is no longer valid', code: 'SESSION_REVOKED' });
     }
-
     req.user = user;
-    req.token = token;
-    next();
-  } catch (error) {
-    return res.status(401).json({ error: 'Invalid token' });
+    req.tokenClaims = decoded;
+    return next();
+  } catch {
+    return res.status(401).json({ error: 'Invalid or expired session', code: 'INVALID_SESSION' });
   }
 };
 
-const authorize = (...roles) => {
-  return (req, res, next) => {
-    if (!req.user) {
-      return res.status(401).json({ error: 'Authentication required' });
-    }
-    if (!roles.includes(req.user.role)) {
-      return res.status(403).json({ error: 'Insufficient permissions' });
-    }
-    next();
-  };
+const authorize = (...roles) => (req, res, next) => {
+  if (!req.user) return res.status(401).json({ error: 'Authentication required', code: 'AUTHENTICATION_REQUIRED' });
+  if (!roles.includes(req.user.role)) return res.status(403).json({ error: 'Insufficient permissions', code: 'INSUFFICIENT_PERMISSIONS' });
+  return next();
 };
 
-const blacklistToken = (token) => {
-  tokenBlacklist.add(token);
-};
-
-module.exports = { authenticate, authorize, blacklistToken };
+module.exports = { authenticate, authorize, TOKEN_AUDIENCE, TOKEN_ISSUER };

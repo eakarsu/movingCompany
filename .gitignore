@@ -46,6 +46,8 @@ out/
 .vite/
 .turbo/
 *.log
+*.dump
+*.sql.gz
 
 # OS / IDE
 .DS_Store
@@ -81,6 +83,7 @@ htmlcov/
 # --- secrets: never commit ---
 .env
 .env.*
+!.env.example
 *.pem
 *.key
 *.p12

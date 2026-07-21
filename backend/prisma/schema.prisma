@@ -9,28 +9,31 @@ datasource db {
 
 // User and Authentication
 model User {
-  id                    String   @id @default(uuid())
-  email                 String   @unique
-  password              String
-  firstName             String
-  lastName              String
-  phone                 String?
-  role                  UserRole @default(STAFF)
-  isActive              Boolean  @default(true)
-  emailVerified         Boolean  @default(false)
-  emailVerifyToken      String?
-  emailVerifyExpires    DateTime?
-  passwordResetToken    String?
-  passwordResetExpires  DateTime?
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
+  id                   String    @id @default(uuid())
+  email                String    @unique
+  password             String
+  firstName            String
+  lastName             String
+  phone                String?
+  role                 UserRole  @default(STAFF)
+  isActive             Boolean   @default(true)
+  authVersion          Int       @default(1)
+  emailVerified        Boolean   @default(false)
+  emailVerifyToken     String?
+  emailVerifyExpires   DateTime?
+  passwordResetToken   String?
+  passwordResetExpires DateTime?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
 
-  leads         Lead[]
-  jobs          Job[]        @relation("AssignedJobs")
-  createdJobs   Job[]        @relation("CreatedJobs")
-  crewAssignments CrewAssignment[]
-  communications Communication[]
-  createdQuotes Quote[]
+  leads              Lead[]
+  jobs               Job[]               @relation("AssignedJobs")
+  createdJobs        Job[]               @relation("CreatedJobs")
+  crewAssignments    CrewAssignment[]
+  communications     Communication[]
+  createdQuotes      Quote[]
+  ownedLegalMatters  LegalMatter[]       @relation("LegalMatterOwner")
+  matterAccessGrants MatterAccessGrant[]
 
   @@index([passwordResetToken])
   @@index([emailVerifyToken])
@@ -46,25 +49,25 @@ enum UserRole {
 
 // Lead Management
 model Lead {
-  id              String      @id @default(uuid())
-  firstName       String
-  lastName        String
-  email           String
-  phone           String
-  source          LeadSource
-  status          LeadStatus  @default(NEW)
+  id        String     @id @default(uuid())
+  firstName String
+  lastName  String
+  email     String
+  phone     String
+  source    LeadSource
+  status    LeadStatus @default(NEW)
 
   // Move details
-  moveDate        DateTime?
-  moveType        MoveType?
-  originAddress   String?
-  originCity      String?
-  originState     String?
-  originZip       String?
-  destAddress     String?
-  destCity        String?
-  destState       String?
-  destZip         String?
+  moveDate      DateTime?
+  moveType      MoveType?
+  originAddress String?
+  originCity    String?
+  originState   String?
+  originZip     String?
+  destAddress   String?
+  destCity      String?
+  destState     String?
+  destZip       String?
 
   // Property details
   originPropertyType    PropertyType?
@@ -85,22 +88,22 @@ model Lead {
 
   // Qualification
   qualificationScore Int?
-  qualifiedAt       DateTime?
-  qualifiedBy       String?
+  qualifiedAt        DateTime?
+  qualifiedBy        String?
 
   // Assignment
-  assignedToId    String?
-  assignedTo      User?       @relation(fields: [assignedToId], references: [id])
+  assignedToId String?
+  assignedTo   User?   @relation(fields: [assignedToId], references: [id])
 
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
-  convertedAt     DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  convertedAt DateTime?
 
-  followUps       FollowUp[]
-  surveys         Survey[]
-  quotes          Quote[]
-  job             Job?
-  communications  Communication[]
+  followUps      FollowUp[]
+  surveys        Survey[]
+  quotes         Quote[]
+  job            Job?
+  communications Communication[]
 }
 
 enum LeadSource {
@@ -165,28 +168,28 @@ enum FollowUpType {
 
 // Survey/Estimating
 model Survey {
-  id              String      @id @default(uuid())
-  leadId          String
-  lead            Lead        @relation(fields: [leadId], references: [id], onDelete: Cascade)
-  type            SurveyType
-  scheduledAt     DateTime
-  completedAt     DateTime?
-  conductedBy     String?
+  id          String     @id @default(uuid())
+  leadId      String
+  lead        Lead       @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  type        SurveyType
+  scheduledAt DateTime
+  completedAt DateTime?
+  conductedBy String?
 
   // Results
-  totalVolume     Float?
-  totalWeight     Float?
-  estimatedHours  Float?
-  accessNotes     String?
-  specialItems    String?
-  packingNeeded   Boolean     @default(false)
-  packingHours    Float?
+  totalVolume    Float?
+  totalWeight    Float?
+  estimatedHours Float?
+  accessNotes    String?
+  specialItems   String?
+  packingNeeded  Boolean @default(false)
+  packingHours   Float?
 
-  photos          SurveyPhoto[]
-  inventoryItems  InventoryItem[]
+  photos         SurveyPhoto[]
+  inventoryItems InventoryItem[]
 
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 enum SurveyType {
@@ -207,34 +210,34 @@ model SurveyPhoto {
 
 // Inventory
 model InventoryItem {
-  id            String    @id @default(uuid())
-  surveyId      String?
-  survey        Survey?   @relation(fields: [surveyId], references: [id], onDelete: Cascade)
-  jobId         String?
-  job           Job?      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  id       String  @id @default(uuid())
+  surveyId String?
+  survey   Survey? @relation(fields: [surveyId], references: [id], onDelete: Cascade)
+  jobId    String?
+  job      Job?    @relation(fields: [jobId], references: [id], onDelete: Cascade)
 
-  name          String
-  category      ItemCategory
-  quantity      Int       @default(1)
-  volume        Float?
-  weight        Float?
-  isFragile     Boolean   @default(false)
-  requiresCrating Boolean @default(false)
+  name            String
+  category        ItemCategory
+  quantity        Int           @default(1)
+  volume          Float?
+  weight          Float?
+  isFragile       Boolean       @default(false)
+  requiresCrating Boolean       @default(false)
   specialHandling String?
-  condition     ItemCondition @default(GOOD)
-  conditionNotes String?
+  condition       ItemCondition @default(GOOD)
+  conditionNotes  String?
 
   // Tracking
-  boxNumber     String?
-  labelId       String?
-  loadedAt      DateTime?
-  unloadedAt    DateTime?
-  verifiedAt    DateTime?
+  boxNumber  String?
+  labelId    String?
+  loadedAt   DateTime?
+  unloadedAt DateTime?
+  verifiedAt DateTime?
 
-  claims        Claim[]
+  claims Claim[]
 
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 enum ItemCategory {
@@ -262,31 +265,31 @@ enum ItemCondition {
 
 // Quote Generation
 model Quote {
-  id              String      @id @default(uuid())
-  leadId          String
-  lead            Lead        @relation(fields: [leadId], references: [id], onDelete: Cascade)
-  createdById     String
-  createdBy       User        @relation(fields: [createdById], references: [id])
+  id          String @id @default(uuid())
+  leadId      String
+  lead        Lead   @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  createdById String
+  createdBy   User   @relation(fields: [createdById], references: [id])
 
-  quoteNumber     String      @unique
-  type            QuoteType
-  status          QuoteStatus @default(DRAFT)
+  quoteNumber String      @unique
+  type        QuoteType
+  status      QuoteStatus @default(DRAFT)
 
   // Labor
-  estimatedHours  Float
-  crewSize        Int
-  laborRate       Float
-  laborTotal      Float
+  estimatedHours Float
+  crewSize       Int
+  laborRate      Float
+  laborTotal     Float
 
   // Travel
-  travelHours     Float?
-  travelRate      Float?
-  travelTotal     Float?
+  travelHours Float?
+  travelRate  Float?
+  travelTotal Float?
 
   // Packing
-  packingHours    Float?
-  packingRate     Float?
-  packingTotal    Float?
+  packingHours     Float?
+  packingRate      Float?
+  packingTotal     Float?
   packingMaterials Float?
 
   // Additional
@@ -296,20 +299,20 @@ model Quote {
   insuranceFee    Float?
 
   // Totals
-  subtotal        Float
-  discount        Float       @default(0)
-  discountReason  String?
-  taxes           Float       @default(0)
-  total           Float
+  subtotal       Float
+  discount       Float   @default(0)
+  discountReason String?
+  taxes          Float   @default(0)
+  total          Float
 
-  validUntil      DateTime
-  acceptedAt      DateTime?
-  notes           String?
+  validUntil DateTime
+  acceptedAt DateTime?
+  notes      String?
 
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  job             Job?
+  job Job?
 }
 
 enum QuoteType {
@@ -335,60 +338,61 @@ enum InsuranceOption {
 
 // Job Management
 model Job {
-  id              String    @id @default(uuid())
-  jobNumber       String    @unique
-  leadId          String    @unique
-  lead            Lead      @relation(fields: [leadId], references: [id])
-  quoteId         String    @unique
-  quote           Quote     @relation(fields: [quoteId], references: [id])
-  createdById     String
-  createdBy       User      @relation("CreatedJobs", fields: [createdById], references: [id])
-  assignedToId    String?
-  assignedTo      User?     @relation("AssignedJobs", fields: [assignedToId], references: [id])
+  id           String  @id @default(uuid())
+  jobNumber    String  @unique
+  leadId       String  @unique
+  lead         Lead    @relation(fields: [leadId], references: [id])
+  quoteId      String  @unique
+  quote        Quote   @relation(fields: [quoteId], references: [id])
+  createdById  String
+  createdBy    User    @relation("CreatedJobs", fields: [createdById], references: [id])
+  assignedToId String?
+  assignedTo   User?   @relation("AssignedJobs", fields: [assignedToId], references: [id])
 
-  status          JobStatus @default(SCHEDULED)
-  moveDate        DateTime
-  startTime       DateTime?
-  endTime         DateTime?
+  status    JobStatus @default(SCHEDULED)
+  moveDate  DateTime
+  startTime DateTime?
+  endTime   DateTime?
 
   // Origin
-  originAddress   String
-  originCity      String
-  originState     String
-  originZip       String
-  originNotes     String?
+  originAddress String
+  originCity    String
+  originState   String
+  originZip     String
+  originNotes   String?
 
   // Destination
-  destAddress     String
-  destCity        String
-  destState       String
-  destZip         String
-  destNotes       String?
+  destAddress String
+  destCity    String
+  destState   String
+  destZip     String
+  destNotes   String?
 
   // Requirements
-  crewSize        Int
-  trucksNeeded    Int       @default(1)
-  equipmentNeeds  String?
+  crewSize            Int
+  trucksNeeded        Int     @default(1)
+  equipmentNeeds      String?
   specialInstructions String?
 
   // Actuals
-  actualHours     Float?
-  actualCrewSize  Int?
-  actualMileage   Float?
+  actualHours    Float?
+  actualCrewSize Int?
+  actualMileage  Float?
 
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
-  completedAt     DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  completedAt DateTime?
 
-  crewAssignments CrewAssignment[]
-  truckAssignments TruckAssignment[]
+  crewAssignments      CrewAssignment[]
+  truckAssignments     TruckAssignment[]
   equipmentAssignments EquipmentAssignment[]
-  jobNotes        JobNote[]
-  inventoryItems  InventoryItem[]
-  timeEntries     TimeEntry[]
-  communications  Communication[]
-  invoice         Invoice?
-  claims          Claim[]
+  jobNotes             JobNote[]
+  inventoryItems       InventoryItem[]
+  timeEntries          TimeEntry[]
+  communications       Communication[]
+  invoice              Invoice?
+  claims               Claim[]
+  legalMatters         LegalMatter[]
 }
 
 enum JobStatus {
@@ -413,26 +417,26 @@ model JobNote {
 
 // Crew Management
 model CrewMember {
-  id              String    @id @default(uuid())
-  userId          String?
-  firstName       String
-  lastName        String
-  email           String?
-  phone           String
-  role            CrewRole
-  hourlyRate      Float
-  isActive        Boolean   @default(true)
-  licenseType     String?
-  licenseExpiry   DateTime?
+  id            String    @id @default(uuid())
+  userId        String?
+  firstName     String
+  lastName      String
+  email         String?
+  phone         String
+  role          CrewRole
+  hourlyRate    Float
+  isActive      Boolean   @default(true)
+  licenseType   String?
+  licenseExpiry DateTime?
 
-  skills          String[]
-  certifications  String[]
+  skills         String[]
+  certifications String[]
 
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  assignments     CrewAssignment[]
-  timeEntries     TimeEntry[]
+  assignments CrewAssignment[]
+  timeEntries TimeEntry[]
 }
 
 enum CrewRole {
@@ -443,48 +447,48 @@ enum CrewRole {
 }
 
 model CrewAssignment {
-  id            String     @id @default(uuid())
-  jobId         String
-  job           Job        @relation(fields: [jobId], references: [id], onDelete: Cascade)
-  crewMemberId  String
-  crewMember    CrewMember @relation(fields: [crewMemberId], references: [id])
-  userId        String?
-  user          User?      @relation(fields: [userId], references: [id])
-  role          CrewRole
-  confirmedAt   DateTime?
+  id           String     @id @default(uuid())
+  jobId        String
+  job          Job        @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  crewMemberId String
+  crewMember   CrewMember @relation(fields: [crewMemberId], references: [id])
+  userId       String?
+  user         User?      @relation(fields: [userId], references: [id])
+  role         CrewRole
+  confirmedAt  DateTime?
 
-  createdAt     DateTime   @default(now())
+  createdAt DateTime @default(now())
 
   @@unique([jobId, crewMemberId])
 }
 
 // Truck Management
 model Truck {
-  id              String    @id @default(uuid())
-  name            String
-  licensePlate    String    @unique
-  vin             String?
-  type            TruckType
-  capacity        Float     // cubic feet
-  maxWeight       Float     // lbs
-  year            Int?
-  make            String?
-  model           String?
+  id           String    @id @default(uuid())
+  name         String
+  licensePlate String    @unique
+  vin          String?
+  type         TruckType
+  capacity     Float // cubic feet
+  maxWeight    Float // lbs
+  year         Int?
+  make         String?
+  model        String?
 
-  isActive        Boolean   @default(true)
-  currentMileage  Float?
-  lastServiceDate DateTime?
-  nextServiceDue  DateTime?
-  insuranceExpiry DateTime?
+  isActive           Boolean   @default(true)
+  currentMileage     Float?
+  lastServiceDate    DateTime?
+  nextServiceDue     DateTime?
+  insuranceExpiry    DateTime?
   registrationExpiry DateTime?
 
   gpsDeviceId     String?
   currentLocation String?
 
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  assignments     TruckAssignment[]
+  assignments TruckAssignment[]
 }
 
 enum TruckType {
@@ -498,11 +502,11 @@ enum TruckType {
 }
 
 model TruckAssignment {
-  id        String   @id @default(uuid())
-  jobId     String
-  job       Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
-  truckId   String
-  truck     Truck    @relation(fields: [truckId], references: [id])
+  id      String @id @default(uuid())
+  jobId   String
+  job     Job    @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  truckId String
+  truck   Truck  @relation(fields: [truckId], references: [id])
 
   startMileage Float?
   endMileage   Float?
@@ -515,16 +519,16 @@ model TruckAssignment {
 
 // Equipment Management
 model Equipment {
-  id          String        @id @default(uuid())
-  name        String
-  type        EquipmentType
-  quantity    Int           @default(1)
-  available   Int
-  condition   String?
-  location    String?
+  id        String        @id @default(uuid())
+  name      String
+  type      EquipmentType
+  quantity  Int           @default(1)
+  available Int
+  condition String?
+  location  String?
 
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   assignments EquipmentAssignment[]
 }
@@ -552,27 +556,27 @@ model EquipmentAssignment {
   returnedAt  DateTime?
   condition   String?
 
-  createdAt   DateTime  @default(now())
+  createdAt DateTime @default(now())
 
   @@unique([jobId, equipmentId])
 }
 
 // Time Tracking
 model TimeEntry {
-  id            String     @id @default(uuid())
-  jobId         String
-  job           Job        @relation(fields: [jobId], references: [id], onDelete: Cascade)
-  crewMemberId  String
-  crewMember    CrewMember @relation(fields: [crewMemberId], references: [id])
+  id           String     @id @default(uuid())
+  jobId        String
+  job          Job        @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  crewMemberId String
+  crewMember   CrewMember @relation(fields: [crewMemberId], references: [id])
 
-  type          TimeEntryType
-  startTime     DateTime
-  endTime       DateTime?
-  duration      Float?     // hours
-  notes         String?
+  type      TimeEntryType
+  startTime DateTime
+  endTime   DateTime?
+  duration  Float? // hours
+  notes     String?
 
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime   @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 enum TimeEntryType {
@@ -586,17 +590,17 @@ enum TimeEntryType {
 
 // Storage Management
 model StorageUnit {
-  id          String   @id @default(uuid())
-  unitNumber  String   @unique
-  size        String   // e.g., "10x10", "5x5"
-  capacity    Float    // cubic feet
+  id          String  @id @default(uuid())
+  unitNumber  String  @unique
+  size        String // e.g., "10x10", "5x5"
+  capacity    Float // cubic feet
   monthlyRate Float
-  isOccupied  Boolean  @default(false)
+  isOccupied  Boolean @default(false)
   floor       Int?
-  climate     Boolean  @default(false)
+  climate     Boolean @default(false)
 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   reservations StorageReservation[]
 }
@@ -610,14 +614,14 @@ model StorageReservation {
   customerPhone String
   customerEmail String
 
-  startDate     DateTime
-  endDate       DateTime?
-  monthlyRate   Float
+  startDate   DateTime
+  endDate     DateTime?
+  monthlyRate Float
 
-  status        StorageStatus @default(ACTIVE)
+  status StorageStatus @default(ACTIVE)
 
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 enum StorageStatus {
@@ -629,28 +633,28 @@ enum StorageStatus {
 
 // Customer Communication
 model Communication {
-  id          String            @id @default(uuid())
-  leadId      String?
-  lead        Lead?             @relation(fields: [leadId], references: [id], onDelete: Cascade)
-  jobId       String?
-  job         Job?              @relation(fields: [jobId], references: [id], onDelete: Cascade)
-  userId      String?
-  user        User?             @relation(fields: [userId], references: [id])
+  id     String  @id @default(uuid())
+  leadId String?
+  lead   Lead?   @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  jobId  String?
+  job    Job?    @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id])
 
-  type        CommunicationType
-  direction   CommunicationDirection
-  subject     String?
-  content     String
-  status      CommunicationStatus @default(SENT)
+  type      CommunicationType
+  direction CommunicationDirection
+  subject   String?
+  content   String
+  status    CommunicationStatus    @default(SENT)
 
   sentAt      DateTime?
   deliveredAt DateTime?
   readAt      DateTime?
 
-  templateId  String?
-  template    CommunicationTemplate? @relation(fields: [templateId], references: [id])
+  templateId String?
+  template   CommunicationTemplate? @relation(fields: [templateId], references: [id])
 
-  createdAt   DateTime          @default(now())
+  createdAt DateTime @default(now())
 }
 
 enum CommunicationType {
@@ -675,16 +679,16 @@ enum CommunicationStatus {
 }
 
 model CommunicationTemplate {
-  id          String            @id @default(uuid())
-  name        String
-  type        CommunicationType
-  trigger     TemplateTrigger?
-  subject     String?
-  content     String
-  isActive    Boolean           @default(true)
+  id       String            @id @default(uuid())
+  name     String
+  type     CommunicationType
+  trigger  TemplateTrigger?
+  subject  String?
+  content  String
+  isActive Boolean           @default(true)
 
-  createdAt   DateTime          @default(now())
-  updatedAt   DateTime          @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   communications Communication[]
 }
@@ -702,22 +706,22 @@ enum TemplateTrigger {
 
 // Billing and Invoicing
 model Invoice {
-  id            String        @id @default(uuid())
-  invoiceNumber String        @unique
-  jobId         String        @unique
-  job           Job           @relation(fields: [jobId], references: [id])
+  id            String @id @default(uuid())
+  invoiceNumber String @unique
+  jobId         String @unique
+  job           Job    @relation(fields: [jobId], references: [id])
 
-  status        InvoiceStatus @default(DRAFT)
+  status InvoiceStatus @default(DRAFT)
 
   // Labor
-  laborHours    Float
-  laborRate     Float
-  laborTotal    Float
+  laborHours Float
+  laborRate  Float
+  laborTotal Float
 
   // Travel
-  travelHours   Float?
-  travelRate    Float?
-  travelTotal   Float?
+  travelHours Float?
+  travelRate  Float?
+  travelTotal Float?
 
   // Materials
   packingMaterials Float?
@@ -726,29 +730,29 @@ model Invoice {
   storageCharges Float?
 
   // Insurance
-  insuranceFee  Float?
+  insuranceFee Float?
 
   // Additional charges
   additionalCharges InvoiceCharge[]
 
   // Totals
-  subtotal      Float
-  discount      Float         @default(0)
+  subtotal       Float
+  discount       Float   @default(0)
   discountReason String?
-  taxes         Float         @default(0)
-  total         Float
+  taxes          Float   @default(0)
+  total          Float
 
   dueDate       DateTime
   paidAt        DateTime?
   paidAmount    Float?
   paymentMethod String?
 
-  notes         String?
+  notes String?
 
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  payments      Payment[]
+  payments Payment[]
 }
 
 enum InvoiceStatus {
@@ -772,15 +776,15 @@ model InvoiceCharge {
 }
 
 model Payment {
-  id          String        @id @default(uuid())
-  invoiceId   String
-  invoice     Invoice       @relation(fields: [invoiceId], references: [id])
-  amount      Float
-  method      PaymentMethod
-  reference   String?
-  notes       String?
+  id        String        @id @default(uuid())
+  invoiceId String
+  invoice   Invoice       @relation(fields: [invoiceId], references: [id])
+  amount    Float
+  method    PaymentMethod
+  reference String?
+  notes     String?
 
-  processedAt DateTime      @default(now())
+  processedAt DateTime @default(now())
   processedBy String?
 }
 
@@ -797,29 +801,31 @@ enum PaymentMethod {
 
 // Claims
 model Claim {
-  id            String      @id @default(uuid())
-  claimNumber   String      @unique
-  jobId         String
-  job           Job         @relation(fields: [jobId], references: [id])
-  itemId        String?
-  item          InventoryItem? @relation(fields: [itemId], references: [id])
+  id          String         @id @default(uuid())
+  claimNumber String         @unique
+  jobId       String
+  job         Job            @relation(fields: [jobId], references: [id])
+  itemId      String?
+  item        InventoryItem? @relation(fields: [itemId], references: [id])
 
-  status        ClaimStatus @default(SUBMITTED)
-  type          ClaimType
+  status ClaimStatus @default(SUBMITTED)
+  type   ClaimType
 
-  description   String
-  damagePhotos  String[]
+  description    String
+  damagePhotos   String[]
   estimatedValue Float?
   approvedAmount Float?
 
-  submittedAt   DateTime    @default(now())
-  reviewedAt    DateTime?
-  reviewedBy    String?
-  resolvedAt    DateTime?
-  resolution    String?
+  submittedAt DateTime  @default(now())
+  reviewedAt  DateTime?
+  reviewedBy  String?
+  resolvedAt  DateTime?
+  resolution  String?
 
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
+  legalMatter LegalMatter?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 enum ClaimStatus {
@@ -839,46 +845,404 @@ enum ClaimType {
 
 // AI Features Data
 model AIVolumeEstimate {
-  id            String   @id @default(uuid())
-  photoUrl      String
-  roomType      String?
+  id              String   @id @default(uuid())
+  photoUrl        String
+  roomType        String?
   estimatedVolume Float
-  confidence    Float
-  itemsDetected String[]
-  analysis      String?
-  createdAt     DateTime @default(now())
+  confidence      Float
+  itemsDetected   String[]
+  analysis        String?
+  createdAt       DateTime @default(now())
 }
 
 model AIQuoteHistory {
-  id            String   @id @default(uuid())
-  leadId        String?
-  moveDetails   String   // JSON
+  id             String   @id @default(uuid())
+  leadId         String?
+  moveDetails    String // JSON
   generatedQuote Float
-  factors       String   // JSON
-  confidence    Float
-  createdAt     DateTime @default(now())
+  factors        String // JSON
+  confidence     Float
+  createdAt      DateTime @default(now())
 }
 
 // Settings
 model CompanySettings {
-  id              String   @id @default(uuid())
-  companyName     String
-  address         String?
-  city            String?
-  state           String?
-  zip             String?
-  phone           String?
-  email           String?
-  website         String?
-  logo            String?
+  id          String  @id @default(uuid())
+  companyName String
+  address     String?
+  city        String?
+  state       String?
+  zip         String?
+  phone       String?
+  email       String?
+  website     String?
+  logo        String?
 
-  laborRate       Float    @default(50)
-  travelRate      Float    @default(35)
-  packingRate     Float    @default(40)
-  minHours        Float    @default(2)
+  laborRate   Float @default(50)
+  travelRate  Float @default(35)
+  packingRate Float @default(40)
+  minHours    Float @default(2)
 
-  taxRate         Float    @default(0)
+  taxRate Float @default(0)
 
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Governed moving-claim document workflow
+model LegalMatter {
+  id               String            @id @default(uuid())
+  matterNumber     String            @unique
+  creationKey      String            @unique
+  creationHash     String
+  title            String
+  jurisdiction     String
+  status           LegalMatterStatus @default(OPEN)
+  ownerId          String
+  owner            User              @relation("LegalMatterOwner", fields: [ownerId], references: [id], onDelete: Restrict)
+  jobId            String?
+  job              Job?              @relation(fields: [jobId], references: [id], onDelete: Restrict)
+  claimId          String?           @unique
+  claim            Claim?            @relation(fields: [claimId], references: [id], onDelete: Restrict)
+  version          Int               @default(1)
+  retentionUntil   DateTime?
+  legalHold        Boolean           @default(false)
+  legalHoldReason  String?
+  legalHoldSetAt   DateTime?
+  legalHoldSetById String?
+  closedAt         DateTime?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  accessGrants        MatterAccessGrant[]
+  documents           LegalDocument[]
+  auditEvents         LegalAuditEvent[]
+  integrationAttempts IntegrationAttempt[]
+
+  @@index([ownerId, status])
+  @@index([jobId])
+  @@index([retentionUntil])
+}
+
+enum LegalMatterStatus {
+  OPEN
+  REVIEW
+  RESOLVED
+  CLOSED
+}
+
+model MatterAccessGrant {
+  id                String           @id @default(uuid())
+  matterId          String
+  matter            LegalMatter      @relation(fields: [matterId], references: [id], onDelete: Cascade)
+  userId            String
+  user              User             @relation(fields: [userId], references: [id], onDelete: Restrict)
+  role              MatterAccessRole
+  canViewPrivileged Boolean          @default(false)
+  grantedById       String
+  grantedAt         DateTime         @default(now())
+  revokedAt         DateTime?
+  revokedById       String?
+  revokeReason      String?
+  version           Int              @default(1)
+
+  @@unique([matterId, userId])
+  @@index([userId, revokedAt])
+}
+
+enum MatterAccessRole {
+  OWNER
+  LEGAL_REVIEWER
+  CONTRIBUTOR
+  VIEWER
+}
+
+model LegalDocument {
+  id                String              @id @default(uuid())
+  matterId          String
+  matter            LegalMatter         @relation(fields: [matterId], references: [id], onDelete: Restrict)
+  title             String
+  documentType      LegalDocumentType
+  status            LegalDocumentStatus @default(DRAFT)
+  privileged        Boolean             @default(false)
+  currentVersion    Int                 @default(0)
+  lockVersion       Int                 @default(1)
+  templateId        String?
+  template          LegalTemplate?      @relation(fields: [templateId], references: [id], onDelete: Restrict)
+  templateVersion   String?
+  retentionUntil    DateTime?
+  disposedAt        DateTime?
+  disposedById      String?
+  dispositionReason String?
+  createdById       String
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+
+  versions           LegalDocumentVersion[]
+  extractions        DocumentExtraction[]
+  reviews            DocumentReview[]
+  signatureEnvelopes SignatureEnvelope[]
+  filings            FilingRecord[]
+
+  @@index([matterId, status])
+  @@index([retentionUntil])
+}
+
+enum LegalDocumentType {
+  EVIDENCE
+  CLAIM_FORM
+  SETTLEMENT_AGREEMENT
+  RELEASE
+  NOTICE
+  FILING_COVER_SHEET
+  SIGNATURE_CERTIFICATE
+  FILING_RECEIPT
+  EXPORT_MANIFEST
+  OTHER
+}
+
+enum LegalDocumentStatus {
+  DRAFT
+  REVIEW_PENDING
+  APPROVED
+  REJECTED
+  SIGNATURE_PENDING
+  SIGNED
+  FILING_PENDING
+  FILED
+  DISPOSITION_PENDING
+  DISPOSED
+}
+
+model LegalDocumentVersion {
+  id              String                @id @default(uuid())
+  documentId      String
+  document        LegalDocument         @relation(fields: [documentId], references: [id], onDelete: Restrict)
+  version         Int
+  source          DocumentVersionSource
+  parentVersionId String?
+  storageProvider String
+  storageKey      String
+  sourceUri       String?
+  mimeType        String
+  byteSize        Int
+  contentHash     String
+  provenance      Json
+  createdById     String
+  createdAt       DateTime              @default(now())
+
+  extractions DocumentExtraction[]
+
+  @@unique([documentId, version])
+  @@index([contentHash])
+}
+
+enum DocumentVersionSource {
+  UPLOAD
+  OCR_DERIVATION
+  AUTHORITATIVE_TEMPLATE
+  DETERMINISTIC_MERGE
+  SIGNED_PROVIDER
+  FILING_PROVIDER
+  EXPORT
+}
+
+model DocumentExtraction {
+  id             String                   @id @default(uuid())
+  documentId     String
+  document       LegalDocument            @relation(fields: [documentId], references: [id], onDelete: Restrict)
+  versionId      String
+  version        LegalDocumentVersion     @relation(fields: [versionId], references: [id], onDelete: Restrict)
+  provider       String
+  externalId     String
+  status         DocumentExtractionStatus
+  extractedText  String?
+  confidence     Float?
+  contentHash    String?
+  failureCode    String?
+  failureMessage String?
+  createdAt      DateTime                 @default(now())
+  completedAt    DateTime?
+
+  @@unique([provider, externalId])
+  @@index([documentId, createdAt])
+}
+
+enum DocumentExtractionStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+}
+
+model LegalTemplate {
+  id             String              @id @default(uuid())
+  templateKey    String
+  jurisdiction   String
+  documentType   LegalDocumentType
+  version        String
+  effectiveFrom  DateTime
+  effectiveUntil DateTime?
+  sourceSystem   String
+  sourceUri      String
+  content        String
+  contentHash    String
+  status         LegalTemplateStatus @default(ACTIVE)
+  syncedAt       DateTime            @default(now())
+
+  documents LegalDocument[]
+  reviews   DocumentReview[]
+
+  @@unique([templateKey, jurisdiction, version])
+  @@index([jurisdiction, documentType, status, effectiveFrom])
+}
+
+enum LegalTemplateStatus {
+  ACTIVE
+  SUPERSEDED
+  REVOKED
+}
+
+model DocumentReview {
+  id              String                 @id @default(uuid())
+  documentId      String
+  document        LegalDocument          @relation(fields: [documentId], references: [id], onDelete: Restrict)
+  documentVersion Int
+  reviewerId      String
+  decision        DocumentReviewDecision
+  jurisdiction    String
+  templateId      String?
+  template        LegalTemplate?         @relation(fields: [templateId], references: [id], onDelete: Restrict)
+  templateVersion String?
+  comments        String
+  reviewedAt      DateTime               @default(now())
+
+  @@unique([documentId, documentVersion])
+  @@index([reviewerId, reviewedAt])
+}
+
+enum DocumentReviewDecision {
+  APPROVED
+  REJECTED
+}
+
+model SignatureEnvelope {
+  id                String                  @id @default(uuid())
+  documentId        String
+  document          LegalDocument           @relation(fields: [documentId], references: [id], onDelete: Restrict)
+  documentVersion   Int
+  provider          String
+  externalId        String?
+  idempotencyKey    String                  @unique
+  status            SignatureEnvelopeStatus @default(PENDING)
+  signerEmailHash   String
+  requestedById     String
+  requestedAt       DateTime                @default(now())
+  completedAt       DateTime?
+  failedAt          DateTime?
+  failureCode       String?
+  failureMessage    String?
+  lastProviderEvent String?
+
+  @@index([documentId, requestedAt])
+  @@index([provider, externalId])
+}
+
+enum SignatureEnvelopeStatus {
+  PENDING
+  SENT
+  COMPLETED
+  DECLINED
+  FAILED
+  VOIDED
+}
+
+model FilingRecord {
+  id              String        @id @default(uuid())
+  documentId      String
+  document        LegalDocument @relation(fields: [documentId], references: [id], onDelete: Restrict)
+  documentVersion Int
+  provider        String
+  externalId      String?
+  idempotencyKey  String        @unique
+  jurisdiction    String
+  status          FilingStatus  @default(PENDING)
+  requestedById   String
+  requestedAt     DateTime      @default(now())
+  filedAt         DateTime?
+  failureCode     String?
+  failureMessage  String?
+  receiptUri      String?
+
+  @@index([documentId, requestedAt])
+  @@index([provider, externalId])
+}
+
+enum FilingStatus {
+  PENDING
+  FILED
+  REJECTED
+  FAILED
+}
+
+model IntegrationAttempt {
+  id               String                    @id @default(uuid())
+  matterId         String
+  matter           LegalMatter               @relation(fields: [matterId], references: [id], onDelete: Restrict)
+  entityId         String?
+  operation        LegalIntegrationOperation
+  idempotencyKey   String                    @unique
+  status           IntegrationAttemptStatus  @default(PENDING)
+  requestHash      String
+  responseHash     String?
+  responseMetadata Json?
+  externalId       String?
+  attemptCount     Int                       @default(0)
+  failureCode      String?
+  failureMessage   String?
+  createdAt        DateTime                  @default(now())
+  updatedAt        DateTime                  @updatedAt
+
+  @@index([matterId, operation, status])
+}
+
+enum LegalIntegrationOperation {
+  STORE
+  OCR
+  ESIGN
+  FILE
+  DISPOSE
+  TEMPLATE_SYNC
+}
+
+enum IntegrationAttemptStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+}
+
+model LegalAuditEvent {
+  id           BigInt      @id @default(autoincrement())
+  matterId     String
+  matter       LegalMatter @relation(fields: [matterId], references: [id], onDelete: Restrict)
+  actorId      String
+  action       String
+  entityType   String
+  entityId     String
+  payload      Json
+  previousHash String?
+  eventHash    String      @unique
+  createdAt    DateTime    @default(now())
+
+  @@index([matterId, id])
+  @@index([actorId, createdAt])
+}
+
+model LegalWebhookReceipt {
+  id          String   @id @default(uuid())
+  provider    String
+  eventId     String
+  payloadHash String
+  processedAt DateTime @default(now())
+
+  @@unique([provider, eventId])
 }

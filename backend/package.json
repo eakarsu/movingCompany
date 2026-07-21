@@ -3,30 +3,37 @@
   "version": "1.0.0",
   "description": "Moving Company AI Platform Backend",
   "main": "src/index.js",
+  "engines": {
+    "node": ">=22 <25"
+  },
   "scripts": {
     "start": "node src/index.js",
     "dev": "nodemon src/index.js",
+    "test": "node scripts/run-tests.js",
+    "test:node": "node --test --test-concurrency=1 tests/*.test.js",
+    "check:syntax": "node scripts/check-syntax.js",
+    "check": "npm run check:syntax && npm test",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
-    "prisma:seed": "node prisma/seed.js"
+    "db:migrate:deploy": "prisma migrate deploy",
+    "db:migrate:status": "prisma migrate status",
+    "db:provision": "node scripts/provision-admin.js",
+    "create-admin": "node scripts/provision-admin.js",
+    "auth:revoke": "node scripts/revoke-user-sessions.js"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
-    "crypto": "^1.0.1",
-    "dotenv": "^16.3.1",
     "express": "^4.18.2",
     "express-rate-limit": "^8.2.1",
     "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.2",
-    "multer": "^1.4.5-lts.1",
-    "nodemailer": "^6.9.7",
-    "pdfkit": "^0.18.0",
-    "uuid": "^9.0.1"
+    "zod": "^4.1.12"
   },
   "devDependencies": {
     "nodemon": "^3.0.2",
-    "prisma": "^5.22.0"
+    "prisma": "^5.22.0",
+    "supertest": "^7.1.4"
   }
 }

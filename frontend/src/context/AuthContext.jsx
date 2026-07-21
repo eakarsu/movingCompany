@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react';
-import { login as apiLogin, register as apiRegister, logout as apiLogout, getMe } from '../api';
+import { login as apiLogin, logout as apiLogout, getMe } from '../api';
 
 const AuthContext = createContext(null);
 
@@ -8,15 +8,14 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
+    const token = sessionStorage.getItem('token');
     if (token) {
       getMe()
         .then((res) => {
           setUser(res.data.user);
         })
         .catch(() => {
-          localStorage.removeItem('token');
-          localStorage.removeItem('user');
+          sessionStorage.removeItem('token');
         })
         .finally(() => {
           setLoading(false);
@@ -29,17 +28,7 @@ export function AuthProvider({ children }) {
   const login = async (email, password) => {
     const response = await apiLogin({ email, password });
     const { user, token } = response.data;
-    localStorage.setItem('token', token);
-    localStorage.setItem('user', JSON.stringify(user));
-    setUser(user);
-    return user;
-  };
-
-  const register = async (data) => {
-    const response = await apiRegister(data);
-    const { user, token } = response.data;
-    localStorage.setItem('token', token);
-    localStorage.setItem('user', JSON.stringify(user));
+    sessionStorage.setItem('token', token);
     setUser(user);
     return user;
   };
@@ -50,13 +39,12 @@ export function AuthProvider({ children }) {
     } catch (e) {
       // Continue with local logout even if API call fails
     }
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+    sessionStorage.removeItem('token');
     setUser(null);
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

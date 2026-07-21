@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 export default function Login() {
@@ -7,8 +7,10 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const { login } = useAuth();
+  const { login, user } = useAuth();
   const navigate = useNavigate();
+
+  if (user) return <Navigate to="/legal-documents" replace />;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -17,7 +19,7 @@ export default function Login() {
 
     try {
       await login(email, password);
-      navigate('/');
+      navigate('/legal-documents', { replace: true });
     } catch (err) {
       setError(err.response?.data?.error || 'Login failed');
     } finally {
@@ -26,12 +28,13 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100 px-4">
+    <div className="min-h-screen flex items-center justify-center bg-slate-950 px-4">
       <div className="max-w-md w-full">
         <div className="card">
           <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-blue-600">MovingCo</h1>
-            <p className="text-gray-600 mt-2">Sign in to your account</p>
+            <p className="text-xs font-semibold tracking-[0.25em] text-blue-600 uppercase">Moving Company</p>
+            <h1 className="text-3xl font-bold text-slate-950 mt-2">Claim document control</h1>
+            <p className="text-gray-600 mt-2">Authorized operators only</p>
           </div>
 
           {error && (
@@ -50,7 +53,8 @@ export default function Login() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="input"
-                placeholder="admin@movingcompany.com"
+                autoComplete="username"
+                placeholder="you@company.example"
                 required
               />
             </div>
@@ -65,6 +69,7 @@ export default function Login() {
                 onChange={(e) => setPassword(e.target.value)}
                 className="input"
                 placeholder="Enter your password"
+                autoComplete="current-password"
                 required
               />
             </div>
@@ -76,19 +81,8 @@ export default function Login() {
             >
               {loading ? 'Signing in...' : 'Sign In'}
             </button>
-
-            <div className="text-right">
-              <Link to="/forgot-password" className="text-sm text-blue-600 hover:text-blue-700">
-                Forgot password?
-              </Link>
-            </div>
           </form>
-
-          <div className="mt-6 text-center text-sm text-gray-500">
-            <p>Demo credentials:</p>
-            <p>Email: admin@movingcompany.com</p>
-            <p>Password: admin123</p>
-          </div>
+          <p className="mt-6 text-center text-xs text-gray-500">Accounts are provisioned by an administrator. Session changes revoke prior tokens.</p>
         </div>
       </div>
     </div>
