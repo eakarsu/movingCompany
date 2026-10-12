@@ -1,3 +1,5 @@
+import FormattedAIReport from "../components/FormattedAIReport";
+import PromptExamples from "../components/PromptExamples";
 // // === Batch 10 Gaps & Frontend Mounts ===
 // Batch 10 frontend page: "Vision-based damage assessment (claim photos → severity score → reserve)" (cfs) — movingCompany
 import React, { useEffect, useState } from 'react';
@@ -55,6 +57,7 @@ export default function CfVisionBasedDamageAssessmentClaimPhotos() {
       <h1 style={{ fontSize: 24, fontWeight: 700, marginBottom: 4 }}>{LABEL}</h1>
       <div style={{ fontSize: 13, color: '#64748b', marginBottom: 16 }}>{SECTION} · slug: {SLUG}</div>
       <form onSubmit={run} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <PromptExamples label={LABEL} setPrompt={setPrompt} disabled={loading} />
         <textarea
           value={prompt}
           onChange={e => setPrompt(e.target.value)}
@@ -71,17 +74,13 @@ export default function CfVisionBasedDamageAssessmentClaimPhotos() {
         </button>
       </form>
       {error && <div style={{ marginTop: 12, color: '#b91c1c' }}>{error}</div>}
-      {result && (
-        <pre style={{ marginTop: 18, background: '#0f172a', color: '#e2e8f0', padding: 14, borderRadius: 8, overflowX: 'auto', fontSize: 12 }}>
-{JSON.stringify(result, null, 2)}
-        </pre>
-      )}
+      {result !== null && <FormattedAIReport response={result.result ?? result} title={LABEL} />}
       <h2 style={{ marginTop: 28, fontSize: 16, fontWeight: 600 }}>Recent runs</h2>
       <ul style={{ marginTop: 10, paddingLeft: 18 }}>
         {history.length === 0 && <li style={{ color: '#94a3b8' }}>No history yet</li>}
         {history.map(item => (
           <li key={item.id} style={{ marginBottom: 8 }}>
-            <span style={{ color: '#475569' }}>{item.createdAt}</span> · {(typeof item.payload === 'string' ? item.payload : JSON.stringify(item.payload)).slice(0, 80)}
+            <details><summary><span style={{ color: '#475569' }}>{String(item.createdAt)}</span> · Saved report</summary><FormattedAIReport response={item.result} title={LABEL} /></details>
           </li>
         ))}
       </ul>

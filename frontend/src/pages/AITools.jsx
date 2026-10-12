@@ -1,3 +1,6 @@
+import FormattedAIReport from "../components/FormattedAIReport";
+
+import FullAIExamples, { useFullAIExamples } from "../components/FullAIExamples.jsx";
 import { useState, useEffect } from 'react';
 import { getVolumeEstimate, generateQuote, optimizeCrew, planRoute, generateReviewResponse, generateCommunication, getEnums } from '../api';
 
@@ -63,6 +66,8 @@ function TabButton({ active, onClick, children }) {
 }
 
 function VolumeEstimator({ enums }) {
+  const fullAIExamples = useFullAIExamples();
+
   const [formData, setFormData] = useState({
     propertyType: 'APARTMENT',
     bedrooms: 2,
@@ -95,14 +100,14 @@ function VolumeEstimator({ enums }) {
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       <div className="card">
         <h2 className="text-lg font-semibold mb-4">AI Volume Estimator</h2>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4" data-full-ai-workspace="VolumeEstimator"><FullAIExamples controller={fullAIExamples} disabled={Boolean(loading)} beforeFill={() => { if (!formData.rooms.length) addRoom(); }} />
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium mb-1">Property Type</label>
               <select
                 value={formData.propertyType}
                 onChange={(e) => setFormData({ ...formData, propertyType: e.target.value })}
-                className="select"
+                className="select" data-full-ai-field={fullAIExamples.bind({ current: formData.propertyType, change: (e) => setFormData({ ...formData, propertyType: e.target.value }), label: "formData.propertyType", manual: false, json: false, sample: 'APARTMENT' }, "p1-3372", undefined)}
               >
                 {enums?.propertyTypes?.map((type) => (
                   <option key={type} value={type}>{type.replace(/_/g, ' ')}</option>
@@ -117,7 +122,7 @@ function VolumeEstimator({ enums }) {
                 onChange={(e) => setFormData({ ...formData, bedrooms: parseInt(e.target.value) })}
                 className="input"
                 min="1"
-                max="10"
+                max="10" data-full-ai-field={fullAIExamples.bind({ current: formData.bedrooms, change: (e) => setFormData({ ...formData, bedrooms: parseInt(e.target.value) }), label: "formData.bedrooms", manual: false, json: false, sample: 2 }, "p1-3886", undefined)}
               />
             </div>
           </div>
@@ -138,7 +143,11 @@ function VolumeEstimator({ enums }) {
                     newRooms[index].type = e.target.value;
                     setFormData({ ...formData, rooms: newRooms });
                   }}
-                  className="select flex-1"
+                  className="select flex-1" data-full-ai-field={fullAIExamples.bind({ current: room.type, change: (e) => {
+                    const newRooms = [...formData.rooms];
+                    newRooms[index].type = e.target.value;
+                    setFormData({ ...formData, rooms: newRooms });
+                  }, label: "room.type", manual: false, json: false }, "p1-4639", [index].join(":"))}
                 >
                   {enums?.roomTypes?.map((roomType) => (
                     <option key={roomType.value} value={roomType.value}>{roomType.label}</option>
@@ -151,7 +160,11 @@ function VolumeEstimator({ enums }) {
                     newRooms[index].itemDensity = e.target.value;
                     setFormData({ ...formData, rooms: newRooms });
                   }}
-                  className="select w-32"
+                  className="select w-32" data-full-ai-field={fullAIExamples.bind({ current: room.itemDensity, change: (e) => {
+                    const newRooms = [...formData.rooms];
+                    newRooms[index].itemDensity = e.target.value;
+                    setFormData({ ...formData, rooms: newRooms });
+                  }, label: "room.itemDensity", manual: false, json: false }, "p1-5206", [index].join(":"))}
                 >
                   {enums?.itemDensities?.map((density) => (
                     <option key={density.value} value={density.value}>{density.label}</option>
@@ -170,6 +183,7 @@ function VolumeEstimator({ enums }) {
       {result && (
         <div className="card">
           <h2 className="text-lg font-semibold mb-4">Estimate Results</h2>
+          <FormattedAIReport response={result} />
           <div className="space-y-4">
             <div className="text-center py-6 bg-blue-50 rounded-lg">
               <p className="text-sm text-gray-500">Estimated Volume</p>
@@ -193,6 +207,8 @@ function VolumeEstimator({ enums }) {
 }
 
 function QuoteGenerator({ enums }) {
+  const fullAIExamples = useFullAIExamples();
+
   const [formData, setFormData] = useState({
     volume: 500,
     moveType: 'LOCAL',
@@ -223,7 +239,7 @@ function QuoteGenerator({ enums }) {
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       <div className="card">
         <h2 className="text-lg font-semibold mb-4">AI Quote Generator</h2>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4" data-full-ai-workspace="QuoteGenerator"><FullAIExamples controller={fullAIExamples} disabled={Boolean(loading)} />
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium mb-1">Volume (cu ft)</label>
@@ -231,7 +247,7 @@ function QuoteGenerator({ enums }) {
                 type="number"
                 value={formData.volume}
                 onChange={(e) => setFormData({ ...formData, volume: parseInt(e.target.value) })}
-                className="input"
+                className="input" data-full-ai-field={fullAIExamples.bind({ current: formData.volume, change: (e) => setFormData({ ...formData, volume: parseInt(e.target.value) }), label: "formData.volume", manual: false, json: false, sample: 500 }, "p1-8149", undefined)}
               />
             </div>
             <div>
@@ -239,7 +255,7 @@ function QuoteGenerator({ enums }) {
               <select
                 value={formData.moveType}
                 onChange={(e) => setFormData({ ...formData, moveType: e.target.value })}
-                className="select"
+                className="select" data-full-ai-field={fullAIExamples.bind({ current: formData.moveType, change: (e) => setFormData({ ...formData, moveType: e.target.value }), label: "formData.moveType", manual: false, json: false, sample: 'LOCAL' }, "p1-8507", undefined)}
               >
                 {enums?.moveTypes?.map((type) => (
                   <option key={type} value={type}>{type.replace(/_/g, ' ')}</option>
@@ -254,7 +270,7 @@ function QuoteGenerator({ enums }) {
                 type="number"
                 value={formData.distance}
                 onChange={(e) => setFormData({ ...formData, distance: parseInt(e.target.value) })}
-                className="input"
+                className="input" data-full-ai-field={fullAIExamples.bind({ current: formData.distance, change: (e) => setFormData({ ...formData, distance: parseInt(e.target.value) }), label: "formData.distance", manual: false, json: false, sample: 20 }, "p1-9085", undefined)}
               />
             </div>
             <div>
@@ -264,7 +280,7 @@ function QuoteGenerator({ enums }) {
                 value={formData.floors}
                 onChange={(e) => setFormData({ ...formData, floors: parseInt(e.target.value) })}
                 className="input"
-                min="1"
+                min="1" data-full-ai-field={fullAIExamples.bind({ current: formData.floors, change: (e) => setFormData({ ...formData, floors: parseInt(e.target.value) }), label: "formData.floors", manual: false, json: false, sample: 1 }, "p1-9444", undefined)}
               />
             </div>
           </div>
@@ -274,7 +290,7 @@ function QuoteGenerator({ enums }) {
                 type="checkbox"
                 checked={formData.hasElevator}
                 onChange={(e) => setFormData({ ...formData, hasElevator: e.target.checked })}
-                className="mr-2"
+                className="mr-2" data-full-ai-field={fullAIExamples.bind({ current: formData.hasElevator, change: (e) => setFormData({ ...formData, hasElevator: e.target.checked }), label: "formData.hasElevator", manual: false, json: false, sample: false }, "p1-9832", undefined)}
               />
               Has Elevator
             </label>
@@ -283,7 +299,7 @@ function QuoteGenerator({ enums }) {
                 type="checkbox"
                 checked={formData.packingNeeded}
                 onChange={(e) => setFormData({ ...formData, packingNeeded: e.target.checked })}
-                className="mr-2"
+                className="mr-2" data-full-ai-field={fullAIExamples.bind({ current: formData.packingNeeded, change: (e) => setFormData({ ...formData, packingNeeded: e.target.checked }), label: "formData.packingNeeded", manual: false, json: false, sample: false }, "p1-10174", undefined)}
               />
               Packing Needed
             </label>
@@ -294,7 +310,7 @@ function QuoteGenerator({ enums }) {
               type="date"
               value={formData.moveDate}
               onChange={(e) => setFormData({ ...formData, moveDate: e.target.value })}
-              className="input"
+              className="input" data-full-ai-field={fullAIExamples.bind({ current: formData.moveDate, change: (e) => setFormData({ ...formData, moveDate: e.target.value }), label: "formData.moveDate", manual: false, json: false, sample: '' }, "p1-10583", undefined)}
             />
           </div>
           <button type="submit" disabled={loading} className="btn-primary w-full">
@@ -306,6 +322,7 @@ function QuoteGenerator({ enums }) {
       {result && (
         <div className="card">
           <h2 className="text-lg font-semibold mb-4">Generated Quote</h2>
+          <FormattedAIReport response={result} />
           <div className="space-y-3">
             <div className="flex justify-between border-b pb-2">
               <span>Labor ({result.quote?.estimatedHours} hrs x {result.quote?.crewSize} crew x ${result.quote?.laborRate})</span>
@@ -339,6 +356,8 @@ function QuoteGenerator({ enums }) {
 }
 
 function CrewOptimizer() {
+  const fullAIExamples = useFullAIExamples();
+
   const [formData, setFormData] = useState({
     date: new Date().toISOString().split('T')[0],
     requiredCrewSize: 3,
@@ -364,14 +383,14 @@ function CrewOptimizer() {
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       <div className="card">
         <h2 className="text-lg font-semibold mb-4">AI Crew Optimizer</h2>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4" data-full-ai-workspace="CrewOptimizer"><FullAIExamples controller={fullAIExamples} disabled={Boolean(loading)} />
           <div>
             <label className="block text-sm font-medium mb-1">Date</label>
             <input
               type="date"
               value={formData.date}
               onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-              className="input"
+              className="input" data-full-ai-field={fullAIExamples.bind({ current: formData.date, change: (e) => setFormData({ ...formData, date: e.target.value }), label: "formData.date", manual: false, json: false, sample: new Date().toISOString().split('T')[0] }, "p1-13436", undefined)}
             />
           </div>
           <div>
@@ -381,7 +400,7 @@ function CrewOptimizer() {
               value={formData.requiredCrewSize}
               onChange={(e) => setFormData({ ...formData, requiredCrewSize: parseInt(e.target.value) })}
               className="input"
-              min="1"
+              min="1" data-full-ai-field={fullAIExamples.bind({ current: formData.requiredCrewSize, change: (e) => setFormData({ ...formData, requiredCrewSize: parseInt(e.target.value) }), label: "formData.requiredCrewSize", manual: false, json: false, sample: 3 }, "p1-13769", undefined)}
             />
           </div>
           <button type="submit" disabled={loading} className="btn-primary w-full">
@@ -393,6 +412,7 @@ function CrewOptimizer() {
       {result && (
         <div className="card">
           <h2 className="text-lg font-semibold mb-4">Recommended Crew</h2>
+          <FormattedAIReport response={result} />
           <p className="text-sm text-gray-500 mb-4">
             {result.totalAvailable} available | Confidence: {(result.confidence * 100).toFixed(0)}%
           </p>
@@ -414,6 +434,8 @@ function CrewOptimizer() {
 }
 
 function RoutePlanner() {
+  const fullAIExamples = useFullAIExamples();
+
   const [formData, setFormData] = useState({
     origin: '',
     destination: '',
@@ -439,7 +461,7 @@ function RoutePlanner() {
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       <div className="card">
         <h2 className="text-lg font-semibold mb-4">AI Route Planner</h2>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4" data-full-ai-workspace="RoutePlanner"><FullAIExamples controller={fullAIExamples} disabled={Boolean(loading)} />
           <div>
             <label className="block text-sm font-medium mb-1">Origin Address</label>
             <input
@@ -447,7 +469,7 @@ function RoutePlanner() {
               value={formData.origin}
               onChange={(e) => setFormData({ ...formData, origin: e.target.value })}
               className="input"
-              placeholder="123 Main St, City, State"
+              placeholder="123 Main St, City, State" data-full-ai-field={fullAIExamples.bind({ current: formData.origin, change: (e) => setFormData({ ...formData, origin: e.target.value }), label: "formData.origin", manual: false, json: false, sample: '' }, "p1-15995", undefined)}
             />
           </div>
           <div>
@@ -457,7 +479,7 @@ function RoutePlanner() {
               value={formData.destination}
               onChange={(e) => setFormData({ ...formData, destination: e.target.value })}
               className="input"
-              placeholder="456 Oak Ave, City, State"
+              placeholder="456 Oak Ave, City, State" data-full-ai-field={fullAIExamples.bind({ current: formData.destination, change: (e) => setFormData({ ...formData, destination: e.target.value }), label: "formData.destination", manual: false, json: false, sample: '' }, "p1-16386", undefined)}
             />
           </div>
           <button type="submit" disabled={loading} className="btn-primary w-full">
@@ -469,6 +491,7 @@ function RoutePlanner() {
       {result && (
         <div className="card">
           <h2 className="text-lg font-semibold mb-4">Route Details</h2>
+          <FormattedAIReport response={result} />
           <div className="grid grid-cols-2 gap-4 mb-4">
             <div className="text-center p-4 bg-blue-50 rounded-lg">
               <p className="text-sm text-gray-500">Distance</p>
@@ -491,6 +514,8 @@ function RoutePlanner() {
 }
 
 function ReviewResponse() {
+  const fullAIExamples = useFullAIExamples();
+
   const [formData, setFormData] = useState({
     customerName: '',
     rating: 5,
@@ -516,14 +541,14 @@ function ReviewResponse() {
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       <div className="card">
         <h2 className="text-lg font-semibold mb-4">AI Review Response Generator</h2>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4" data-full-ai-workspace="ReviewResponse"><FullAIExamples controller={fullAIExamples} disabled={Boolean(loading)} />
           <div>
             <label className="block text-sm font-medium mb-1">Customer Name</label>
             <input
               type="text"
               value={formData.customerName}
               onChange={(e) => setFormData({ ...formData, customerName: e.target.value })}
-              className="input"
+              className="input" data-full-ai-field={fullAIExamples.bind({ current: formData.customerName, change: (e) => setFormData({ ...formData, customerName: e.target.value }), label: "formData.customerName", manual: false, json: false, sample: '' }, "p1-18805", undefined)}
             />
           </div>
           <div>
@@ -548,7 +573,7 @@ function ReviewResponse() {
               onChange={(e) => setFormData({ ...formData, reviewText: e.target.value })}
               className="input"
               rows={4}
-              placeholder="Paste the customer's review here..."
+              placeholder="Paste the customer's review here..." data-full-ai-field={fullAIExamples.bind({ current: formData.reviewText, change: (e) => setFormData({ ...formData, reviewText: e.target.value }), label: "formData.reviewText", manual: false, json: false, sample: '' }, "p1-19729", undefined)}
             />
           </div>
           <button type="submit" disabled={loading} className="btn-primary w-full">
@@ -560,6 +585,7 @@ function ReviewResponse() {
       {result && (
         <div className="card">
           <h2 className="text-lg font-semibold mb-4">Suggested Response</h2>
+          <FormattedAIReport response={result} />
           <div className="mb-4">
             <span className={`badge ${result.tone === 'grateful' ? 'badge-green' : result.tone === 'apologetic' ? 'badge-red' : 'badge-yellow'}`}>
               {result.tone}
@@ -581,6 +607,8 @@ function ReviewResponse() {
 }
 
 function CommunicationGenerator({ enums }) {
+  const fullAIExamples = useFullAIExamples();
+
   const [formData, setFormData] = useState({
     type: 'reminder',
     customerName: '',
@@ -611,13 +639,13 @@ function CommunicationGenerator({ enums }) {
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       <div className="card">
         <h2 className="text-lg font-semibold mb-4">AI Communication Generator</h2>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4" data-full-ai-workspace="CommunicationGenerator"><FullAIExamples controller={fullAIExamples} disabled={Boolean(loading)} />
           <div>
             <label className="block text-sm font-medium mb-1">Message Type</label>
             <select
               value={formData.type}
               onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-              className="select"
+              className="select" data-full-ai-field={fullAIExamples.bind({ current: formData.type, change: (e) => setFormData({ ...formData, type: e.target.value }), label: "formData.type", manual: false, json: false, sample: 'reminder' }, "p1-22003", undefined)}
             >
               {enums?.communicationMessageTypes?.map((msgType) => (
                 <option key={msgType.value} value={msgType.value}>{msgType.label}</option>
@@ -630,7 +658,7 @@ function CommunicationGenerator({ enums }) {
               type="text"
               value={formData.customerName}
               onChange={(e) => setFormData({ ...formData, customerName: e.target.value })}
-              className="input"
+              className="input" data-full-ai-field={fullAIExamples.bind({ current: formData.customerName, change: (e) => setFormData({ ...formData, customerName: e.target.value }), label: "formData.customerName", manual: false, json: false, sample: '' }, "p1-22505", undefined)}
             />
           </div>
           <div>
@@ -642,7 +670,10 @@ function CommunicationGenerator({ enums }) {
                 ...formData,
                 jobDetails: { ...formData.jobDetails, moveDate: e.target.value }
               })}
-              className="input"
+              className="input" data-full-ai-field={fullAIExamples.bind({ current: formData.jobDetails.moveDate, change: (e) => setFormData({
+                ...formData,
+                jobDetails: { ...formData.jobDetails, moveDate: e.target.value }
+              }), label: "formData.jobDetails.moveDate", manual: false, json: false, sample: '' }, "p1-22845", undefined)}
             />
           </div>
           {formData.type === 'status_update' && (
@@ -653,7 +684,7 @@ function CommunicationGenerator({ enums }) {
                 onChange={(e) => setFormData({ ...formData, context: e.target.value })}
                 className="input"
                 rows={3}
-                placeholder="E.g., The crew is on their way!"
+                placeholder="E.g., The crew is on their way!" data-full-ai-field={fullAIExamples.bind({ current: formData.context, change: (e) => setFormData({ ...formData, context: e.target.value }), label: "formData.context", manual: false, json: false, sample: '' }, "p1-23335", undefined)}
               />
             </div>
           )}
@@ -666,6 +697,7 @@ function CommunicationGenerator({ enums }) {
       {result && (
         <div className="card">
           <h2 className="text-lg font-semibold mb-4">Generated Message</h2>
+          <FormattedAIReport response={result} />
           <div className="mb-4">
             <span className="badge badge-blue">{result.suggestedChannel}</span>
           </div>

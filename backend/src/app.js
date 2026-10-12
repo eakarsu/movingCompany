@@ -78,6 +78,7 @@ function createApp({ prisma, connectors = createConnectors(), legalService } = {
 
   app.use('/api/auth', authRoutes);
   app.use('/api/legal-documents', createLegalDocumentsRouter(service));
+  app.use('/api/ai', require('./routes/ai'));
   app.use('/api', (req, res) => res.status(404).json({ error: 'Not found', code: 'NOT_FOUND' }));
 
   const frontend = path.resolve(__dirname, '../../frontend/dist');

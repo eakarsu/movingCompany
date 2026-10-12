@@ -1,3 +1,6 @@
+import FormattedAIReport from "../components/FormattedAIReport";
+
+import FullAIExamples, { useFullAIExamples } from "../components/FullAIExamples.jsx";
 import { useState } from 'react';
 import { preMoveAnalyze, damageAssess, marketRatePricing, predictiveCrewScheduling, multiVendorLogistics } from '../api';
 
@@ -45,15 +48,12 @@ function TabButton({ active, onClick, children }) {
 }
 
 function ResultBlock({ result }) {
-  if (!result) return null;
-  return (
-    <pre className="text-sm whitespace-pre-wrap p-4 bg-gray-50 rounded-lg overflow-x-auto">
-      {typeof result === 'string' ? result : JSON.stringify(result, null, 2)}
-    </pre>
-  );
+  return result == null ? null : <FormattedAIReport response={result} />;
 }
 
 function PreMoveAnalyzer() {
+  const fullAIExamples = useFullAIExamples();
+
   const [questionnaire, setQuestionnaire] = useState(JSON.stringify({
     propertyType: 'house',
     bedrooms: 3,
@@ -94,14 +94,22 @@ function PreMoveAnalyzer() {
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       <div className="card">
         <h2 className="text-lg font-semibold mb-4">Pre-Move Questionnaire</h2>
-        <form onSubmit={submit} className="space-y-4">
+        <form onSubmit={submit} className="space-y-4" data-full-ai-workspace="PreMoveAnalyzer"><FullAIExamples controller={fullAIExamples} disabled={Boolean(loading)} />
           <div>
             <label className="block text-sm font-medium mb-1">Questionnaire (JSON)</label>
             <textarea
               value={questionnaire}
               onChange={(e) => setQuestionnaire(e.target.value)}
               className="input font-mono text-sm"
-              rows={14}
+              rows={14} data-full-ai-field={fullAIExamples.bind({ current: questionnaire, change: (e) => setQuestionnaire(e.target.value), label: "questionnaire", manual: false, json: false, sample: JSON.stringify({
+    propertyType: 'house',
+    bedrooms: 3,
+    hasStairs: true,
+    hasElevator: false,
+    fragileItems: ['piano', 'artwork'],
+    accessNotes: 'tight street, no truck parking',
+    moveDate: '',
+  }, null, 2) }, "p1-3305", undefined)}
             />
           </div>
           {error && (
@@ -150,6 +158,8 @@ function PreMoveAnalyzer() {
 }
 
 function DamageAssessor() {
+  const fullAIExamples = useFullAIExamples();
+
   const [form, setForm] = useState({ description: '', itemType: '', photoDescription: '' });
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -174,7 +184,7 @@ function DamageAssessor() {
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       <div className="card">
         <h2 className="text-lg font-semibold mb-4">Damage Assessment</h2>
-        <form onSubmit={submit} className="space-y-4">
+        <form onSubmit={submit} className="space-y-4" data-full-ai-workspace="DamageAssessor"><FullAIExamples controller={fullAIExamples} disabled={Boolean(loading)} />
           <div>
             <label className="block text-sm font-medium mb-1">Item Type</label>
             <input
@@ -182,7 +192,7 @@ function DamageAssessor() {
               value={form.itemType}
               onChange={(e) => setForm({ ...form, itemType: e.target.value })}
               className="input"
-              placeholder="e.g., wooden dresser, flat-screen TV"
+              placeholder="e.g., wooden dresser, flat-screen TV" data-full-ai-field={fullAIExamples.bind({ current: form.itemType, change: (e) => setForm({ ...form, itemType: e.target.value }), label: "form.itemType", manual: false, json: false, sample: '' }, "p1-6431", undefined)}
             />
           </div>
           <div>
@@ -192,7 +202,7 @@ function DamageAssessor() {
               onChange={(e) => setForm({ ...form, description: e.target.value })}
               className="input"
               rows={4}
-              placeholder="Describe the damage as the customer reported it..."
+              placeholder="Describe the damage as the customer reported it..." data-full-ai-field={fullAIExamples.bind({ current: form.description, change: (e) => setForm({ ...form, description: e.target.value }), label: "form.description", manual: false, json: false, sample: '' }, "p1-6827", undefined)}
             />
           </div>
           <div>
@@ -202,7 +212,7 @@ function DamageAssessor() {
               onChange={(e) => setForm({ ...form, photoDescription: e.target.value })}
               className="input"
               rows={3}
-              placeholder="What is visible in the photos? (until vision-model integration)"
+              placeholder="What is visible in the photos? (until vision-model integration)" data-full-ai-field={fullAIExamples.bind({ current: form.photoDescription, change: (e) => setForm({ ...form, photoDescription: e.target.value }), label: "form.photoDescription", manual: false, json: false, sample: '' }, "p1-7251", undefined)}
             />
           </div>
           {error && (
@@ -251,6 +261,8 @@ function DamageAssessor() {
 }
 
 function PredictiveCrewScheduling() {
+  const fullAIExamples = useFullAIExamples();
+
   const [upcomingJobs, setUpcomingJobs] = useState(JSON.stringify([
     { date: '2026-05-12', volumeCft: 800, requiredCrew: 3 },
     { date: '2026-05-13', volumeCft: 1400, requiredCrew: 4 },
@@ -285,18 +297,25 @@ function PredictiveCrewScheduling() {
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       <div className="card">
         <h2 className="text-lg font-semibold mb-4">Predictive Crew Scheduling</h2>
-        <form onSubmit={submit} className="space-y-4">
+        <form onSubmit={submit} className="space-y-4" data-full-ai-workspace="PredictiveCrewScheduling"><FullAIExamples controller={fullAIExamples} disabled={Boolean(loading)} />
           <div>
             <label className="block text-sm font-medium mb-1">Upcoming Jobs (JSON)</label>
-            <textarea value={upcomingJobs} onChange={(e) => setUpcomingJobs(e.target.value)} className="input font-mono text-sm" rows={8} />
+            <textarea value={upcomingJobs} onChange={(e) => setUpcomingJobs(e.target.value)} className="input font-mono text-sm" rows={8} data-full-ai-field={fullAIExamples.bind({ current: upcomingJobs, change: (e) => setUpcomingJobs(e.target.value), label: "upcomingJobs", manual: false, json: false, sample: JSON.stringify([
+    { date: '2026-05-12', volumeCft: 800, requiredCrew: 3 },
+    { date: '2026-05-13', volumeCft: 1400, requiredCrew: 4 },
+  ], null, 2) }, "p1-11446", undefined)} />
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">Crew Roster (JSON)</label>
-            <textarea value={crewRoster} onChange={(e) => setCrewRoster(e.target.value)} className="input font-mono text-sm" rows={6} />
+            <textarea value={crewRoster} onChange={(e) => setCrewRoster(e.target.value)} className="input font-mono text-sm" rows={6} data-full-ai-field={fullAIExamples.bind({ current: crewRoster, change: (e) => setCrewRoster(e.target.value), label: "crewRoster", manual: false, json: false, sample: JSON.stringify([
+    { id: 'c1', role: 'CREW_LEAD', maxHoursPerWeek: 40 },
+    { id: 'c2', role: 'DRIVER', maxHoursPerWeek: 40 },
+    { id: 'c3', role: 'MOVER', maxHoursPerWeek: 32 },
+  ], null, 2) }, "p1-11709", undefined)} />
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">Horizon (days)</label>
-            <input type="number" value={horizonDays} onChange={(e) => setHorizonDays(e.target.value)} className="input" />
+            <input type="number" value={horizonDays} onChange={(e) => setHorizonDays(e.target.value)} className="input" data-full-ai-field={fullAIExamples.bind({ current: horizonDays, change: (e) => setHorizonDays(e.target.value), label: "horizonDays", manual: false, json: false, sample: 14 }, "p1-11964", undefined)} />
           </div>
           {error && <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">{error}</div>}
           <button type="submit" disabled={loading} className="btn-primary w-full">
@@ -326,6 +345,8 @@ function PredictiveCrewScheduling() {
 }
 
 function MultiVendorLogistics() {
+  const fullAIExamples = useFullAIExamples();
+
   const [jobBrief, setJobBrief] = useState(JSON.stringify({
     origin: 'Boston, MA',
     destination: 'Austin, TX',
@@ -362,18 +383,27 @@ function MultiVendorLogistics() {
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       <div className="card">
         <h2 className="text-lg font-semibold mb-4">Multi-Vendor Logistics</h2>
-        <form onSubmit={submit} className="space-y-4">
+        <form onSubmit={submit} className="space-y-4" data-full-ai-workspace="MultiVendorLogistics"><FullAIExamples controller={fullAIExamples} disabled={Boolean(loading)} />
           <div>
             <label className="block text-sm font-medium mb-1">Job Brief (JSON)</label>
-            <textarea value={jobBrief} onChange={(e) => setJobBrief(e.target.value)} className="input font-mono text-sm" rows={7} />
+            <textarea value={jobBrief} onChange={(e) => setJobBrief(e.target.value)} className="input font-mono text-sm" rows={7} data-full-ai-field={fullAIExamples.bind({ current: jobBrief, change: (e) => setJobBrief(e.target.value), label: "jobBrief", manual: false, json: false, sample: JSON.stringify({
+    origin: 'Boston, MA',
+    destination: 'Austin, TX',
+    volumeCft: 1800,
+    specialItems: ['piano', 'art crate'],
+    deliveryWindow: '5-day',
+  }, null, 2) }, "p1-15048", undefined)} />
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">Available Vendors (JSON)</label>
-            <textarea value={vendors} onChange={(e) => setVendors(e.target.value)} className="input font-mono text-sm" rows={6} />
+            <textarea value={vendors} onChange={(e) => setVendors(e.target.value)} className="input font-mono text-sm" rows={6} data-full-ai-field={fullAIExamples.bind({ current: vendors, change: (e) => setVendors(e.target.value), label: "vendors", manual: false, json: false, sample: JSON.stringify([
+    { id: 'v1', name: 'LongHaul Co', capabilities: ['long-haul'], leadTimeHours: 48 },
+    { id: 'v2', name: 'PianoSpec', capabilities: ['piano-handling'], leadTimeHours: 24 },
+  ], null, 2) }, "p1-15309", undefined)} />
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">SLA Hours</label>
-            <input type="number" value={slaHours} onChange={(e) => setSlaHours(e.target.value)} className="input" />
+            <input type="number" value={slaHours} onChange={(e) => setSlaHours(e.target.value)} className="input" data-full-ai-field={fullAIExamples.bind({ current: slaHours, change: (e) => setSlaHours(e.target.value), label: "slaHours", manual: false, json: false, sample: 120 }, "p1-15553", undefined)} />
           </div>
           {error && <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">{error}</div>}
           <button type="submit" disabled={loading} className="btn-primary w-full">
@@ -409,6 +439,8 @@ function MultiVendorLogistics() {
 }
 
 function MarketRatePricing() {
+  const fullAIExamples = useFullAIExamples();
+
   const [form, setForm] = useState({
     origin: '',
     destination: '',
@@ -452,7 +484,7 @@ function MarketRatePricing() {
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       <div className="card">
         <h2 className="text-lg font-semibold mb-4">Market Rate Pricing</h2>
-        <form onSubmit={submit} className="space-y-4">
+        <form onSubmit={submit} className="space-y-4" data-full-ai-workspace="MarketRatePricing"><FullAIExamples controller={fullAIExamples} disabled={Boolean(loading)} />
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium mb-1">Origin *</label>
@@ -461,7 +493,7 @@ function MarketRatePricing() {
                 value={form.origin}
                 onChange={(e) => setForm({ ...form, origin: e.target.value })}
                 className="input"
-                required
+                required data-full-ai-field={fullAIExamples.bind({ current: form.origin, change: (e) => setForm({ ...form, origin: e.target.value }), label: "form.origin", manual: false, json: false, sample: '' }, "p1-18948", undefined)}
               />
             </div>
             <div>
@@ -471,7 +503,7 @@ function MarketRatePricing() {
                 value={form.destination}
                 onChange={(e) => setForm({ ...form, destination: e.target.value })}
                 className="input"
-                required
+                required data-full-ai-field={fullAIExamples.bind({ current: form.destination, change: (e) => setForm({ ...form, destination: e.target.value }), label: "form.destination", manual: false, json: false, sample: '' }, "p1-19311", undefined)}
               />
             </div>
           </div>
@@ -482,7 +514,7 @@ function MarketRatePricing() {
                 type="number"
                 value={form.distanceMiles}
                 onChange={(e) => setForm({ ...form, distanceMiles: e.target.value })}
-                className="input"
+                className="input" data-full-ai-field={fullAIExamples.bind({ current: form.distanceMiles, change: (e) => setForm({ ...form, distanceMiles: e.target.value }), label: "form.distanceMiles", manual: false, json: false, sample: '' }, "p1-19752", undefined)}
               />
             </div>
             <div>
@@ -491,7 +523,7 @@ function MarketRatePricing() {
                 type="number"
                 value={form.volumeCft}
                 onChange={(e) => setForm({ ...form, volumeCft: e.target.value })}
-                className="input"
+                className="input" data-full-ai-field={fullAIExamples.bind({ current: form.volumeCft, change: (e) => setForm({ ...form, volumeCft: e.target.value }), label: "form.volumeCft", manual: false, json: false, sample: '' }, "p1-20107", undefined)}
               />
             </div>
             <div>
@@ -500,7 +532,7 @@ function MarketRatePricing() {
                 type="number"
                 value={form.weightLbs}
                 onChange={(e) => setForm({ ...form, weightLbs: e.target.value })}
-                className="input"
+                className="input" data-full-ai-field={fullAIExamples.bind({ current: form.weightLbs, change: (e) => setForm({ ...form, weightLbs: e.target.value }), label: "form.weightLbs", manual: false, json: false, sample: '' }, "p1-20452", undefined)}
               />
             </div>
           </div>
@@ -509,7 +541,7 @@ function MarketRatePricing() {
             <select
               value={form.season}
               onChange={(e) => setForm({ ...form, season: e.target.value })}
-              className="select"
+              className="select" data-full-ai-field={fullAIExamples.bind({ current: form.season, change: (e) => setForm({ ...form, season: e.target.value }), label: "form.season", manual: false, json: false, sample: 'summer' }, "p1-20802", undefined)}
             >
               <option value="winter">Winter</option>
               <option value="spring">Spring</option>
@@ -524,7 +556,7 @@ function MarketRatePricing() {
               value={form.services}
               onChange={(e) => setForm({ ...form, services: e.target.value })}
               className="input"
-              placeholder="e.g., packing, storage, hoisting"
+              placeholder="e.g., packing, storage, hoisting" data-full-ai-field={fullAIExamples.bind({ current: form.services, change: (e) => setForm({ ...form, services: e.target.value }), label: "form.services", manual: false, json: false, sample: '' }, "p1-21340", undefined)}
             />
           </div>
           {error && (

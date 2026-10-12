@@ -9,6 +9,8 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const { login, user } = useAuth();
   const navigate = useNavigate();
+  const demoAvailable = import.meta.env.VITE_ENABLE_DEMO_CREDENTIAL_AUTOFILL === 'true'
+    && Boolean(import.meta.env.VITE_DEMO_EMAIL && import.meta.env.VITE_DEMO_PASSWORD);
 
   if (user) return <Navigate to="/legal-documents" replace />;
 
@@ -76,13 +78,14 @@ export default function Login() {
 
             <button
               type="button"
-              onClick={() => { setEmail(import.meta.env.VITE_DEMO_EMAIL || ''); setPassword(import.meta.env.VITE_DEMO_PASSWORD || ''); }}
-              disabled={!import.meta.env.VITE_DEMO_EMAIL || !import.meta.env.VITE_DEMO_PASSWORD}
-              aria-label="Auto Fill Demo Credentials"
+              onClick={() => { setEmail(import.meta.env.VITE_DEMO_EMAIL); setPassword(import.meta.env.VITE_DEMO_PASSWORD); setError(''); }}
+              disabled={!demoAvailable || loading}
+              aria-label="Fill demo credentials"
               style={{ width: '100%', marginBottom: '12px', padding: '10px 14px', borderRadius: '8px', border: '1px solid currentColor', background: 'transparent', cursor: 'pointer' }}
             >
-              Auto Fill Demo Credentials
+              Fill demo credentials
             </button>
+            {!demoAvailable && <p className="text-xs text-gray-500">Demo credentials are not configured for this local build.</p>}
             <button
               type="submit"
               disabled={loading}
