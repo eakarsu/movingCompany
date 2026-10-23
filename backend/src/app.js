@@ -61,6 +61,7 @@ function createApp({ prisma, connectors = createConnectors(), legalService } = {
   app.use('/api', generalLimiter);
   app.use('/api/auth/login', authLimiter);
 
+  app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
   app.get('/api/health/live', (req, res) => res.json({ status: 'ok' }));
   app.get('/api/health/ready', async (req, res) => {
     try {

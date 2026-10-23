@@ -9,18 +9,15 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const { login, user } = useAuth();
   const navigate = useNavigate();
-  const demoAvailable = import.meta.env.VITE_ENABLE_DEMO_CREDENTIAL_AUTOFILL === 'true'
-    && Boolean(import.meta.env.VITE_DEMO_EMAIL && import.meta.env.VITE_DEMO_PASSWORD);
 
   if (user) return <Navigate to="/legal-documents" replace />;
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const submitLogin = async (loginEmail, loginPassword) => {
     setError('');
     setLoading(true);
 
     try {
-      await login(email, password);
+      await login(loginEmail, loginPassword);
       navigate('/legal-documents', { replace: true });
     } catch (err) {
       setError(err.response?.data?.error || 'Login failed');
@@ -28,6 +25,24 @@ export default function Login() {
       setLoading(false);
     }
   };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    await submitLogin(email, password);
+  };
+
+  const demoEmail = import.meta.env.VITE_DEMO_EMAIL;
+  const demoPassword = import.meta.env.VITE_DEMO_PASSWORD;
+
+  const handleDemoFill = async () => {
+    if (demoEmail && demoPassword) { setEmail(demoEmail); setPassword(demoPassword); return; }
+    try {
+      const res = await fetch('/api/auth/demo-credentials', { cache: 'no-store' });
+      if (res.ok) { const data = await res.json(); if (data.email && data.password) { setEmail(data.email); setPassword(data.password); return; } }
+    } catch { /* fallback below */ }
+    setError('Demo credentials are not configured for this environment.');
+  };
+
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-slate-950 px-4">
@@ -77,15 +92,13 @@ export default function Login() {
             </div>
 
             <button
-              type="button"
-              onClick={() => { setEmail(import.meta.env.VITE_DEMO_EMAIL); setPassword(import.meta.env.VITE_DEMO_PASSWORD); setError(''); }}
-              disabled={!demoAvailable || loading}
-              aria-label="Fill demo credentials"
-              style={{ width: '100%', marginBottom: '12px', padding: '10px 14px', borderRadius: '8px', border: '1px solid currentColor', background: 'transparent', cursor: 'pointer' }}
-            >
-              Fill demo credentials
-            </button>
-            {!demoAvailable && <p className="text-xs text-gray-500">Demo credentials are not configured for this local build.</p>}
+                type="button"
+                onClick={handleDemoFill}
+                aria-label="Fill demo credentials"
+                style={{ width: '100%', marginBottom: '12px', padding: '10px 14px', borderRadius: '8px', border: '1px solid currentColor', background: 'transparent', cursor: 'pointer' }}
+              >
+                Fill demo credentials
+              </button>
             <button
               type="submit"
               disabled={loading}

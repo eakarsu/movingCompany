@@ -696,6 +696,30 @@ async function main() {
   console.log(`Jobs: ${jobs.length}`);
   console.log(`Invoices: ${invoices.length}`);
   console.log(`Claims: ${claims.length}`);
+
+  // Legal matters power the governed legal-documents UI (listMatters).
+  const legalMatters = [];
+  const matterData = [
+    { title: 'Interstate move damage claim - Alvarez', jurisdiction: 'US-CA' },
+    { title: 'Storage contract dispute - Chen', jurisdiction: 'US-NV' },
+    { title: 'Commercial relocation filing - Ortiz', jurisdiction: 'US-TX' },
+  ];
+  for (let i = 0; i < matterData.length; i++) {
+    const matter = await prisma.legalMatter.upsert({
+      where: { creationKey: `seed-matter-${i + 1}` },
+      update: {},
+      create: {
+        matterNumber: `MAT-SEED-${i + 1}`,
+        creationKey: `seed-matter-${i + 1}`,
+        creationHash: `seed-hash-${i + 1}`,
+        title: matterData[i].title,
+        jurisdiction: matterData[i].jurisdiction,
+        ownerId: users[0].id,
+      },
+    });
+    legalMatters.push(matter);
+  }
+  console.log(`Legal Matters: ${legalMatters.length}`);
   console.log('\nDemo Login:');
   console.log('Email: admin@movingcompany.com');
   console.log('Demo login users provisioned from the local environment.');
